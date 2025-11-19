@@ -1,0 +1,35 @@
+# Node
+node_modules/
+npm-debug.log*
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Vite build output
+dist/
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+server/.env
+
+# Server
+server/node_modules/
+server/uploads/
+server/coverage/
+server/jest-results/
+
+# IDE
+.vscode/

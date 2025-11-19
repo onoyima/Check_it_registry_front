@@ -1,0 +1,680 @@
+// API Client for MySQL Backend
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  region?: string;
+  created_at: string;
+}
+
+interface AuthResponse {
+  user: User;
+  token: string;
+  message: string;
+}
+
+class ApiClient {
+  private token: string | null = null;
+  private authCallback: ((event: string, session: any) => void) | null = null;
+
+  constructor() {
+    this.token = localStorage.getItem("auth_token");
+  }
+
+  private async request(endpoint: string, options: RequestInit = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    console.log("API Request:", {
+      url,
+      method: options.method || "GET",
+      API_BASE_URL,
+    });
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    // Add existing headers
+    if (options.headers) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        if (typeof value === "string") {
+          headers[key] = value;
+        }
+      });
+    }
+
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      console.log("API Response:", {
+        status: response.status,
+        ok: response.ok,
+      });
+
+      if (!response.ok) {
+        let error;
+        try {
+          const text = await response.text();
+          if (text) {
+            error = JSON.parse(text);
+          } else {
+            error = { error: `HTTP ${response.status}` };
+          }
+        } catch {
+          error = { error: `HTTP ${response.status}` };
+        }
+        console.error("API Error:", error);
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      // Handle empty responses
+      const text = await response.text();
+      if (!text) {
+        console.log("API Success: Empty response");
+        return {};
+      }
+
+      try {
+        const data = JSON.parse(text);
+        console.log("API Success:", data);
+        return data;
+      } catch (jsonError) {
+        console.error("JSON Parse Error:", jsonError);
+        console.log("Response text:", text);
+        throw new Error("Invalid JSON response from server");
+      }
+    } catch (fetchError) {
+      console.error("Fetch Error:", fetchError);
+
+      // Handle different types of network errors
+      if (fetchError instanceof TypeError) {
+        if (fetchError.message.includes("fetch")) {
+          throw new Error(
+            "Network error - unable to connect to server. Please check if the server is running."
+          );
+        }
+        if (fetchError.message.includes("JSON")) {
+          throw new Error("Server returned invalid response format");
+        }
+      }
+
+      // Handle connection refused errors
+      if (
+        fetchError instanceof Error &&
+        fetchError.message.includes("ECONNREFUSED")
+      ) {
+        throw new Error(
+          "Connection refused - server may not be running on the expected port"
+        );
+      }
+
+      throw fetchError;
+    }
+  }
+
+  // Auth methods
+  auth = {
+    signUp: async (data: {
+      name: string;
+      email: string;
+      password: string;
+      phone?: string;
+      region?: string;
+    }) => {
+      try {
+        const response: AuthResponse = await this.request("/auth/register", {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
+
+        this.token = response.token;
+        localStorage.setItem("auth_token", response.token);
+
+        // Trigger auth state change
+        if (this.authCallback) {
+          this.authCallback("SIGNED_IN", {
+            user: response.user,
+            access_token: response.token,
+          });
+        }
+
+        return { data: { user: response.user }, error: null };
+      } catch (error) {
+        return {
+          data: { user: null },
+          error:
+            error instanceof Error ? error : new Error("Registration failed"),
+        };
+      }
+    },
+
+    // Sign up with optional profile image (multipart/form-data)
+    signUpWithProfileImage: async (
+      data: {
+        name: string;
+        email: string;
+        password: string;
+        phone?: string;
+        region?: string;
+      },
+      profileImage?: File
+    ) => {
+      try {
+        const formData = new FormData();
+        formData.append("name", data.name);
+        formData.append("email", data.email);
+        formData.append("password", data.password);
+        if (data.phone) formData.append("phone", data.phone);
+        if (data.region) formData.append("region", data.region);
+        if (profileImage) formData.append("profile_image", profileImage);
+
+        const headers: any = {};
+        if (this.token) {
+          headers["Authorization"] = `Bearer ${this.token}`;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/auth/register`, {
+          method: "POST",
+          headers, // Do NOT set Content-Type for FormData
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+          throw new Error(error.error || `HTTP ${response.status}`);
+        }
+
+        const json: AuthResponse = await response.json();
+        this.token = json.token;
+        localStorage.setItem("auth_token", json.token);
+
+        if (this.authCallback) {
+          this.authCallback("SIGNED_IN", {
+            user: json.user,
+            access_token: json.token,
+          });
+        }
+
+        return { data: { user: json.user }, error: null };
+      } catch (error) {
+        return {
+          data: { user: null },
+          error: error instanceof Error ? error : new Error("Registration failed"),
+        };
+      }
+    },
+
+    signInWithPassword: async (data: { email: string; password: string }) => {
+      try {
+        const response: AuthResponse = await this.request("/auth/login", {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
+
+        this.token = response.token;
+        localStorage.setItem("auth_token", response.token);
+
+        // Trigger auth state change
+        if (this.authCallback) {
+          this.authCallback("SIGNED_IN", {
+            user: response.user,
+            access_token: response.token,
+          });
+        }
+
+        return { data: { user: response.user }, error: null };
+      } catch (error) {
+        return {
+          data: { user: null },
+          error: error instanceof Error ? error : new Error("Login failed"),
+        };
+      }
+    },
+
+    signOut: async () => {
+      try {
+        await this.request("/auth/logout", { method: "POST" });
+      } catch (error) {
+        // Ignore logout errors - we'll clear the token anyway
+        console.warn("Logout request failed:", error);
+      }
+
+      this.token = null;
+      localStorage.removeItem("auth_token");
+
+      // Trigger auth state change
+      if (this.authCallback) {
+        this.authCallback("SIGNED_OUT", null);
+      }
+
+      return { error: null };
+    },
+
+    getSession: async () => {
+      if (!this.token) {
+        return { data: { session: null }, error: null };
+      }
+
+      try {
+        const response = await this.request("/auth/me");
+        return {
+          data: {
+            session: {
+              user: response.user,
+              access_token: this.token,
+            },
+          },
+          error: null,
+        };
+      } catch (error) {
+        this.token = null;
+        localStorage.removeItem("auth_token");
+        return { data: { session: null }, error: null };
+      }
+    },
+
+    getUser: async (token: string) => {
+      this.token = token;
+      try {
+        const response = await this.request("/auth/me");
+        return { data: { user: response.user }, error: null };
+      } catch (error) {
+        return { data: { user: null }, error: error as Error };
+      }
+    },
+
+    onAuthStateChange: (callback: (event: string, session: any) => void) => {
+      // Store the callback for later use
+      this.authCallback = callback;
+
+      // Check initial auth state
+      const checkAuth = async () => {
+        const { data } = await this.auth.getSession();
+        if (data.session) {
+          callback("SIGNED_IN", data.session);
+        } else {
+          callback("SIGNED_OUT", null);
+        }
+      };
+
+      checkAuth();
+
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => {
+              this.authCallback = null;
+            },
+          },
+        },
+      };
+    },
+  };
+
+  
+
+  // Device management
+  devices = {
+    list: () => this.request("/device-management"),
+    get: (id: string) => this.request(`/device-management/${id}`),
+    create: (data: any) =>
+      this.request("/device-management", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    categories: () => this.request("/device-management/categories"),
+    update: (id: string, data: any) =>
+      this.request(`/device-management/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      this.request(`/device-management/${id}`, {
+        method: "DELETE",
+      }),
+    bulkCreate: (data: any) =>
+      this.request("/device-management/bulk", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  };
+
+  // Report management (Admin)
+  reportManagement = {
+    list: (params?: { status?: string; report_type?: string }) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : "";
+      return this.request(`/report-management${query}`);
+    },
+    get: (caseId: string) => this.request(`/report-management/${caseId}`),
+    create: (data: any) =>
+      this.request("/report-management", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (caseId: string, data: any) =>
+      this.request(`/report-management/${caseId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+  };
+
+  // Admin methods (legacy)
+  admin = {
+    stats: () => this.request("/admin-portal/stats"),
+    verificationQueue: (params?: { page?: number; limit?: number }) => {
+      const query = params
+        ? `?${new URLSearchParams(params as any).toString()}`
+        : "";
+      return this.request(`/admin-portal/verification-queue${query}`);
+    },
+    verifyDevice: (id: string, data: { approved: boolean; notes?: string }) =>
+      this.request(`/admin-portal/verify-device/${id}`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    auditLogs: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : "";
+      return this.request(`/admin-portal/audit-logs${query}`);
+    },
+    users: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : "";
+      return this.request(`/admin-portal/users${query}`);
+    },
+    updateUserRole: (id: string, role: string) =>
+      this.request(`/admin-portal/users/${id}/role`, {
+        method: "PUT",
+        body: JSON.stringify({ role }),
+      }),
+  };
+
+  // New comprehensive admin system
+  adminSystem = {
+    overview: () => this.request('/admin-system/overview'),
+    configuration: () => this.request('/admin-system/configuration'),
+    userManagement: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/admin-system/users/management${query}`);
+    },
+    verificationQueue: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/admin-system/devices/verification-queue${query}`);
+    },
+    reportManagement: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/admin-system/reports/management${query}`);
+    },
+    auditLogs: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/admin-system/audit-logs${query}`);
+    },
+    maintenance: (operation: string, parameters?: any) => this.request('/admin-system/maintenance', {
+      method: 'POST',
+      body: JSON.stringify({ operation, parameters }),
+    }),
+    performance: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/admin-system/performance${query}`);
+    }
+  };
+
+  // Analytics
+  analytics = {
+    dashboard: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/analytics/dashboard${query}`);
+    },
+    deviceBrands: () => this.request('/analytics/devices/brands'),
+    hotspots: () => this.request('/analytics/hotspots'),
+    leaPerformance: () => this.request('/analytics/lea-performance'),
+    export: (type: string, params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/analytics/export/${type}${query}`);
+    }
+  };
+
+  // System Health
+  systemHealth = {
+    status: () => this.request('/system-health/status'),
+    auditLogs: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/system-health/audit-logs${query}`);
+    },
+    maintenance: (operation: string) => this.request(`/system-health/maintenance/${operation}`, {
+      method: 'POST',
+    })
+  };
+
+  // User Management
+  userManagement = {
+    users: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/user-management/users${query}`);
+    },
+    getUser: (userId: string) => this.request(`/user-management/users/${userId}`),
+    updateUser: (userId: string, data: any) => this.request(`/user-management/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+    updateRole: (userId: string, data: any) => this.request(`/user-management/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+    updateRegion: (userId: string, data: any) => this.request(`/user-management/users/${userId}/region`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+    suspend: (userId: string, data: any) => this.request(`/user-management/users/${userId}/suspend`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+    resetPassword: (userId: string, data: any) => this.request(`/user-management/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    statistics: () => this.request('/user-management/statistics'),
+    bulkOperations: (data: any) => this.request('/user-management/bulk-operations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  };
+
+  // LEA Portal
+  leaPortal = {
+    stats: () => this.request('/lea-portal/stats'),
+    cases: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/lea-portal/cases${query}`);
+    },
+    getCase: (caseId: string) => this.request(`/lea-portal/cases/${caseId}`),
+    updateCaseStatus: (caseId: string, data: any) => this.request(`/lea-portal/cases/${caseId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+    addCaseNotes: (caseId: string, data: any) => this.request(`/lea-portal/cases/${caseId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    regionalStats: () => this.request('/lea-portal/regional-stats'),
+    exportCases: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/lea-portal/export/cases${query}`);
+    }
+  };
+
+  // Device Transfer
+  deviceTransfer = {
+    initiate: (data: any) => this.request('/device-transfer/initiate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    // For consistency, alias accept to the unified completion route
+    accept: (data: { transferCode: string; otpCode?: string }) => this.request('/device-transfer/complete', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    reject: (data: any) => this.request('/device-transfer/reject', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    // Legacy endpoints fallback (device_transfers table)
+    legacyAccept: (data: { transfer_code: string; proof_of_handover_url?: string }) => this.request('/device-transfer/accept-legacy', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    legacyReject: (data: { transfer_code: string; rejection_reason?: string }) => this.request('/device-transfer/reject-legacy', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    requests: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/device-transfer/requests${query}`);
+    },
+    cancel: (transferId: string) => this.request('/device-transfer/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ transferId }),
+    })
+    ,
+    resendCode: (transferId: string) => this.request('/device-transfer/resend-code', {
+      method: 'POST',
+      body: JSON.stringify({ transferId }),
+    }),
+    // New OTP-based transfer endpoints (OwnershipTransferService)
+    verifyOtp: (data: { transferId: string; otpCode: string }) => this.request('/device-transfer/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    complete: (data: { transferCode: string; otpCode?: string }) => this.request('/device-transfer/complete', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    myTransfers: (params?: { type?: 'all' | 'sent' | 'received' }) => this.request(`/device-transfer/my-transfers${params?.type ? `?type=${params.type}` : ''}`)
+  };
+
+  // Found Device
+  foundDevice = {
+    check: (params: any) => {
+      const query = new URLSearchParams(params).toString();
+      return this.request(`/found-device/check?${query}`);
+    },
+    report: (data: any) => this.request('/found-device/report', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    reports: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      return this.request(`/found-device/reports${query}`);
+    }
+  };
+
+  // Profile methods
+  profile = {
+    update: async (data: { name?: string; phone?: string; region?: string }) => {
+      return this.request('/profile/update', {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+    },
+    getStats: async () => {
+      return this.request('/profile/stats');
+    },
+    getPreferences: async () => {
+      return this.request('/profile/preferences');
+    },
+    updatePreferences: async (preferences: any) => {
+      return this.request('/profile/preferences', {
+        method: 'PUT',
+        body: JSON.stringify(preferences)
+      });
+    }
+  };
+
+  // Files
+  files = {
+    upload: async (type: string, file: File, additionalData?: any) => {
+      const formData = new FormData();
+      formData.append(type, file);
+      if (additionalData) {
+        Object.keys(additionalData).forEach(key => {
+          formData.append(key, additionalData[key]);
+        });
+      }
+
+      const headers: any = {};
+      if (this.token) {
+        headers['Authorization'] = `Bearer ${this.token}`;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/files/upload/${type}`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      return response.json();
+    },
+    view: (subdir: string, filename: string) => `${API_BASE_URL}/files/view/${subdir}/${filename}`,
+    stats: () => this.request('/files/stats'),
+    cleanup: () => this.request('/files/cleanup', { method: 'POST' })
+  };
+
+  // Public Device Check APIs
+  publicCheck = async (query: { imei?: string; serial?: string }, headers?: Record<string, string>) => {
+    const params = new URLSearchParams(query as any).toString();
+    return this.request(`/public-check?${params}`, { headers: headers || {} });
+  };
+
+  publicCheckEnhanced = async (data: any) => {
+    return this.request('/public-check/enhanced', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  };
+
+  // Reports (User Portal)
+  reports = {
+    list: async (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      const res = await this.request(`/user-portal/reports${query}`);
+      const normalized = Array.isArray(res)
+        ? res
+        : (res && Array.isArray(res?.data?.reports))
+          ? res.data.reports
+          : (res && Array.isArray(res?.reports))
+            ? res.reports
+            : [];
+      return normalized;
+    },
+    get: async (caseId: string) => this.request(`/user-portal/reports/${caseId}`),
+  };
+
+  // User Portal
+  userPortal = {
+    searchUsers: async (query: string) => this.request(`/user-portal/search-users?q=${encodeURIComponent(query)}`),
+  };
+
+  // Device Checks
+  deviceChecks = {
+    history: async (params: { device_id?: string; identifier?: string; limit?: number }) => {
+      const query = `?${new URLSearchParams(params as any).toString()}`;
+      return this.request(`/public-check/history${query}`);
+    },
+    get: async (checkId: string) => this.request(`/public-check/report/${checkId}`),
+  };
+}
+
+export const supabase = new ApiClient();

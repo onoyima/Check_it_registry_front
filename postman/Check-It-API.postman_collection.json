@@ -1,0 +1,595 @@
+{
+  "info": {
+    "name": "Check It - Device Registry API",
+    "description": "Complete API collection for Check It Device Registry & Recovery System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3006/api",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "device_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "case_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"+1234567890\",\n  \"region\": \"lagos\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('auth_token', response.token);",
+                  "    pm.collectionVariables.set('user_id', response.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('auth_token', response.token);",
+                  "    pm.collectionVariables.set('user_id', response.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public Check",
+      "item": [
+        {
+          "name": "Check Device by IMEI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/public-check?imei=123456789012345",
+              "host": ["{{base_url}}"],
+              "path": ["public-check"],
+              "query": [
+                {
+                  "key": "imei",
+                  "value": "123456789012345"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Device by Serial",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/public-check?serial=ABC123456",
+              "host": ["{{base_url}}"],
+              "path": ["public-check"],
+              "query": [
+                {
+                  "key": "serial",
+                  "value": "ABC123456"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Device Management",
+      "item": [
+        {
+          "name": "Register Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imei\": \"123456789012345\",\n  \"serial\": \"ABC123456\",\n  \"brand\": \"Samsung\",\n  \"model\": \"Galaxy S21\",\n  \"color\": \"Black\",\n  \"proof_url\": \"https://example.com/receipt.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/device-management",
+              "host": ["{{base_url}}"],
+              "path": ["device-management"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('device_id', response.device.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List User Devices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/device-management",
+              "host": ["{{base_url}}"],
+              "path": ["device-management"]
+            }
+          }
+        },
+        {
+          "name": "Get Device Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/device-management/{{device_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["device-management", "{{device_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Report Management",
+      "item": [
+        {
+          "name": "Create Theft Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"report_type\": \"stolen\",\n  \"description\": \"Device was stolen from my car\",\n  \"location\": \"Lagos, Nigeria\",\n  \"occurred_at\": \"2024-01-15T10:30:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/report-management",
+              "host": ["{{base_url}}"],
+              "path": ["report-management"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('case_id', response.report.case_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List User Reports",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/report-management",
+              "host": ["{{base_url}}"],
+              "path": ["report-management"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Device Transfer",
+      "item": [
+        {
+          "name": "Initiate Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"to_user_email\": \"recipient@example.com\",\n  \"transfer_reason\": \"Selling device to friend\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/device-transfer/initiate",
+              "host": ["{{base_url}}"],
+              "path": ["device-transfer", "initiate"]
+            }
+          }
+        },
+        {
+          "name": "Accept Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transfer_code\": \"123456\",\n  \"proof_of_handover_url\": \"https://example.com/handover.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/device-transfer/accept",
+              "host": ["{{base_url}}"],
+              "path": ["device-transfer", "accept"]
+            }
+          }
+        },
+        {
+          "name": "List Transfer Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/device-transfer/requests",
+              "host": ["{{base_url}}"],
+              "path": ["device-transfer", "requests"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Found Device",
+      "item": [
+        {
+          "name": "Check if Device Can Be Reported",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/found-device/check?imei=123456789012345",
+              "host": ["{{base_url}}"],
+              "path": ["found-device", "check"],
+              "query": [
+                {
+                  "key": "imei",
+                  "value": "123456789012345"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report Found Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imei\": \"123456789012345\",\n  \"finder_name\": \"Jane Smith\",\n  \"finder_contact\": \"+1234567890\",\n  \"finder_email\": \"jane@example.com\",\n  \"location_found\": \"Central Park, Lagos\",\n  \"description\": \"Found device on bench\",\n  \"condition_notes\": \"Good condition, screen intact\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/found-device/report",
+              "host": ["{{base_url}}"],
+              "path": ["found-device", "report"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CAPTCHA",
+      "item": [
+        {
+          "name": "Generate CAPTCHA Challenge",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/captcha/generate?type=math",
+              "host": ["{{base_url}}"],
+              "path": ["captcha", "generate"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "math"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify CAPTCHA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"challengeId\": \"challenge-id-here\",\n  \"answer\": \"42\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/captcha/verify",
+              "host": ["{{base_url}}"],
+              "path": ["captcha", "verify"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Portal",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-portal/stats",
+              "host": ["{{base_url}}"],
+              "path": ["admin-portal", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get Verification Queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin-portal/verification-queue",
+              "host": ["{{base_url}}"],
+              "path": ["admin-portal", "verification-queue"]
+            }
+          }
+        },
+        {
+          "name": "Verify Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"notes\": \"Proof of ownership verified\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin-portal/verify-device/{{device_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["admin-portal", "verify-device", "{{device_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "LEA Portal",
+      "item": [
+        {
+          "name": "Get LEA Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lea-portal/stats",
+              "host": ["{{base_url}}"],
+              "path": ["lea-portal", "stats"]
+            }
+          }
+        },
+        {
+          "name": "List Assigned Cases",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lea-portal/cases",
+              "host": ["{{base_url}}"],
+              "path": ["lea-portal", "cases"]
+            }
+          }
+        },
+        {
+          "name": "Update Case Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"under_review\",\n  \"notes\": \"Investigation started, gathering evidence\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/lea-portal/cases/{{case_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["lea-portal", "cases", "{{case_id}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "File Management",
+      "item": [
+        {
+          "name": "Upload Proof Document",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "proof_document",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/files/upload/proof",
+              "host": ["{{base_url}}"],
+              "path": ["files", "upload", "proof"]
+            }
+          }
+        },
+        {
+          "name": "Upload Device Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "device_image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/files/upload/device-image",
+              "host": ["{{base_url}}"],
+              "path": ["files", "upload", "device-image"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
