@@ -1,18 +1,22 @@
 import React, { useMemo, useState } from 'react'
 import { Layout } from '../components/Layout'
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || ''
+const API_URL = API_BASE ? `${API_BASE}/api` : (import.meta.env.VITE_API_URL || '/api')
+
 type Row = {
   imei: string
   brand: string
   model: string
   purchaseDate: string
   ownerEmail: string
+  category: string
 }
 
 export default function BulkDeviceRegistration() {
   const template = useMemo<Row[]>(() => ([
-    { imei: '3567XXXXXXXXX01', brand: 'Samsung', model: 'A52', purchaseDate: '2024-11-12', ownerEmail: 'owner1@example.com' },
-    { imei: '7890XXXXXXXXX56', brand: 'Apple', model: 'iPhone 13', purchaseDate: '2025-02-09', ownerEmail: 'owner2@example.com' },
+    { imei: '3567XXXXXXXXX01', brand: 'Samsung', model: 'A52', purchaseDate: '2024-11-12', ownerEmail: 'owner1@example.com', category: 'mobile_phone' },
+    { imei: '7890XXXXXXXXX56', brand: 'Apple', model: 'iPhone 13', purchaseDate: '2025-02-09', ownerEmail: 'owner2@example.com', category: 'mobile_phone' },
   ]), [])
 
   const [rows, setRows] = useState<Row[]>(template)
@@ -27,11 +31,11 @@ export default function BulkDeviceRegistration() {
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(',')
       if (cols.length < 5) {
-        err.push(`Line ${i + 1}: expected 5 columns`)
+        err.push(`Line ${i + 1}: expected at least 5 columns`)
         continue
       }
-      const [imei, brand, model, purchaseDate, ownerEmail] = cols.map(c => c.trim())
-      parsed.push({ imei, brand, model, purchaseDate, ownerEmail })
+      const [imei, brand, model, purchaseDate, ownerEmail, categoryRaw] = cols.map(c => c?.trim() || '')
+      parsed.push({ imei, brand, model, purchaseDate, ownerEmail, category: categoryRaw || 'mobile_phone' })
     }
     setRows(parsed.length ? parsed : [])
     setErrors(err)
@@ -39,8 +43,8 @@ export default function BulkDeviceRegistration() {
   }
 
   const downloadTemplate = () => {
-    const header = 'imei,brand,model,purchaseDate,ownerEmail\n'
-    const body = template.map(r => `${r.imei},${r.brand},${r.model},${r.purchaseDate},${r.ownerEmail}`).join('\n')
+    const header = 'imei,brand,model,purchaseDate,ownerEmail,category\n'
+    const body = template.map(r => `${r.imei},${r.brand},${r.model},${r.purchaseDate},${r.ownerEmail},${r.category}`).join('\n')
     const blob = new Blob([header + body], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -50,16 +54,53 @@ export default function BulkDeviceRegistration() {
     URL.revokeObjectURL(url)
   }
 
-  const submit = () => {
+  /* State */
+  const [submitting, setSubmitting] = useState(false)
+
+  const submit = async () => {
     const invalid = rows.filter(r => !r.imei || !r.brand || !r.model || !r.purchaseDate || !r.ownerEmail)
     if (invalid.length) {
       setErrors([`There are ${invalid.length} invalid rows. Please fix and retry.`])
       setSuccess(false)
       return
     }
-    setErrors([])
-    setSuccess(true)
-    setTimeout(() => alert(`Submitted ${rows.length} devices for registration`), 300)
+
+    try {
+      setSubmitting(true)
+      setErrors([])
+      
+      const token = localStorage.getItem('auth_token')
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch(`${API_URL}/device-management/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ devices: rows })
+      })
+      
+      const data = await res.json()
+
+      if (!res.ok) {
+         throw new Error(data.error || 'Failed to submit bulk registration')
+      }
+      
+      if (data.details && data.details.failed > 0) {
+         const errorMsgs = data.details.errors.map((e: any) => `Row ${e.index + 1} (${e.identifier}): ${e.error}`)
+         setErrors([`Registered ${data.details.success} devices, but ${data.details.failed} failed:`, ...errorMsgs])
+         setSuccess(data.details.success > 0)
+      } else {
+         setSuccess(true)
+         setRows(template)
+      }
+    } catch (err: any) {
+      setErrors([err.message || 'Failed to submit bulk registration'])
+      setSuccess(false)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -74,7 +115,7 @@ export default function BulkDeviceRegistration() {
                 <input type="file" accept=".csv" className="form-control" onChange={e => e.target.files?.[0] && onFile(e.target.files[0])} />
                 <button className="btn btn-outline-secondary" type="button" onClick={downloadTemplate}>Download Template</button>
               </div>
-              <small className="text-secondary">Columns: imei, brand, model, purchaseDate (YYYY-MM-DD), ownerEmail</small>
+              <small className="text-secondary">Columns: imei, brand, model, purchaseDate (YYYY-MM-DD), ownerEmail, category</small>
             </div>
             <div className="col-12 col-md-6 text-md-end">
               <button className="btn btn-primary" type="button" onClick={submit}>Submit Batch</button>
@@ -100,6 +141,7 @@ export default function BulkDeviceRegistration() {
                   <th>Model</th>
                   <th>Purchase Date</th>
                   <th>Owner Email</th>
+                  <th>Category</th>
                 </tr>
               </thead>
               <tbody>
@@ -110,6 +152,7 @@ export default function BulkDeviceRegistration() {
                     <td>{r.model}</td>
                     <td>{new Date(r.purchaseDate).toLocaleDateString()}</td>
                     <td>{r.ownerEmail}</td>
+                    <td>{r.category || 'mobile_phone'}</td>
                   </tr>
                 ))}
                 {rows.length === 0 && (

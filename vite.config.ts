@@ -4,8 +4,8 @@ import dotenv from 'dotenv'
 import path from 'path'
 
 // Load backend server env to discover PORT dynamically for dev proxy
-const serverEnv = dotenv.config({ path: path.resolve(__dirname, 'server/.env') })
-const backendPort = serverEnv.parsed?.PORT || process.env.PORT || '3001'
+const serverEnv = dotenv.config({ path: path.resolve(__dirname, '../.env') })
+const backendPort = serverEnv.parsed?.PORT || process.env.PORT || '3006'
 const backendUrl = `http://localhost:${backendPort}`
 
 export default defineConfig({

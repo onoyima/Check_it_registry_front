@@ -150,6 +150,7 @@ CREATE DATABASE check_it_registry CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_
 exit
 ```
 
+
 3. Import database schema:
 
 ```bash

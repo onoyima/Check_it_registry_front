@@ -245,7 +245,12 @@ export default function DeviceRegistration() {
             <h2 className="fw-bold m-0">Register Device</h2>
             <p className="text-secondary m-0">Add a new device and submit for verification</p>
           </div>
-          <a className="btn btn-outline-secondary" href="#/my-devices">Back to My Devices</a>
+          <div className="d-flex gap-2">
+            {JSON.parse(localStorage.getItem('user_data') || '{}').role === 'business' && (
+              <button className="btn btn-outline-primary" onClick={() => navigate('/bulk-register')}>Bulk Upload</button>
+            )}
+            <button className="btn btn-outline-secondary" onClick={() => navigate('/my-devices')}>Back to My Devices</button>
+          </div>
         </div>
 
         <form onSubmit={onSubmit} className="modern-card p-3">

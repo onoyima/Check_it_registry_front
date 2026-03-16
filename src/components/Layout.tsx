@@ -33,7 +33,7 @@ export function Layout({ children, requireAuth = false, allowedRoles }: LayoutPr
   useEffect(() => {
     // Check role permissions
     const role = user?.role
-    const isSuperAdmin = role === 'admin'
+    const isSuperAdmin = role === 'admin' || role === 'super_admin'
     // If a page specifies allowedRoles, and user is present but not super admin,
     // then deny access when role is missing or not included.
     if (user && allowedRoles && !isSuperAdmin && (!(role) || !allowedRoles.includes(role))) {

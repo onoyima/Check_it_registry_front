@@ -1,6 +1,6 @@
 // API Client for MySQL Backend
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+  import.meta.env.VITE_API_URL || "http://localhost:3006/api";
 
 interface User {
   id: string;
@@ -321,7 +321,7 @@ class ApiClient {
     },
   };
 
-  
+
 
   // Device management
   devices = {
@@ -576,6 +576,72 @@ class ApiClient {
     }
   };
 
+  // Marketplace
+  marketplace = {
+    list: (params?: any) => {
+      const q = new URLSearchParams();
+      if (params) {
+        Object.keys(params).forEach(key => {
+          if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+            q.append(key, String(params[key]));
+          }
+        });
+      }
+      const qs = q.toString();
+      return this.request(`/marketplace${qs ? `?${qs}` : ''}`);
+    },
+    get: (id: string) => this.request(`/marketplace/${id}`),
+    create: (data: any) => this.request('/marketplace', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    update: (id: string, data: any) => this.request(`/marketplace/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+    delete: (id: string) => this.request(`/marketplace/${id}`, {
+      method: 'DELETE'
+    }),
+    purchase: (id: string, paymentMethodId: string) => this.request(`/marketplace/${id}/purchase`, {
+      method: 'POST',
+      body: JSON.stringify({ paymentMethodId })
+    }),
+    getSellerStats: () => this.request('/marketplace/seller/stats'),
+    getSellerOrders: () => this.request('/marketplace/seller/orders'),
+    getMessages: (id: string) => this.request(`/marketplace/${id}/messages`),
+    sendMessage: (id: string, content: string) => this.request(`/marketplace/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content })
+    }),
+    // Admin methods
+    adminGetAll: (params?: any) => this.request(`/marketplace/admin/all${params ? '?' + new URLSearchParams(params) : ''}`),
+    adminUpdateStatus: (id: string, status: string) => this.request(`/marketplace/admin/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    }),
+    adminToggleFeatured: (id: string, featured: boolean) => this.request(`/marketplace/admin/${id}/featured`, {
+      method: 'PUT',
+      body: JSON.stringify({ featured })
+    })
+  };
+
+  // Payments
+  payments = {
+    getMethods: () => this.request('/payments/methods'),
+    addMethod: (data: any) => this.request('/payments/methods', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    removeMethod: (id: string) => this.request(`/payments/methods/${id}`, {
+      method: 'DELETE'
+    }),
+    charge: (data: { amount: number; methodId: string; description?: string }) => this.request('/payments/charge', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    getBalance: () => this.request('/payments/balance')
+  };
+
   // Profile methods
   profile = {
     update: async (data: { name?: string; phone?: string; region?: string }) => {
@@ -643,6 +709,10 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  };
+
+  publicStats = async () => {
+    return this.request('/public-check/stats');
   };
 
   // Reports (User Portal)

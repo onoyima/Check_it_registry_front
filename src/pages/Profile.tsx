@@ -4,7 +4,6 @@ import {
   Mail, 
   Phone, 
   MapPin, 
-  Calendar, 
   Shield, 
   Edit3, 
   Save, 
@@ -13,14 +12,20 @@ import {
   Smartphone,
   FileText,
   Activity,
-  Lock,
   KeyRound,
-  Settings as SettingsIcon
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  AlertTriangle
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useToast, ToastContainer } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
+import { motion, AnimatePresence } from 'framer-motion'
+import KYCVerificationModal from '../components/KYCVerificationModal'
 
+// Interface matching the backend response
 interface UserProfile {
   id: string
   name: string
@@ -33,8 +38,12 @@ interface UserProfile {
   verified_at?: string
   last_login_at?: string
   login_count: number
+  kyc_status: 'unverified' | 'pending' | 'verified' | 'failed'
+  is_verified: boolean
+  caution_flag: boolean
 }
 
+// Mock stats for now
 interface ProfileStats {
   total_devices: number
   verified_devices: number
@@ -43,61 +52,77 @@ interface ProfileStats {
 }
 
 export default function Profile() {
+  const { user: authUser, updateUser } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [stats, setStats] = useState<ProfileStats | null>(null)
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [twoFAEnabled, setTwoFAEnabled] = useState(false)
+  const [activeTab, setActiveTab] = useState<'overview' | 'security' | 'activity'>('overview')
+  const [showKYCModal, setShowKYCModal] = useState(false)
+  
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     region: ''
   })
+  
   const { toasts, removeToast, showSuccess, showError } = useToast()
+  
+  const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || ''
+  const API_URL = API_BASE ? `${API_BASE}/api` : (import.meta.env.VITE_API_URL || '/api')
 
   useEffect(() => {
     loadProfile()
-  }, [])
+  }, [authUser]) 
 
   const loadProfile = async () => {
     try {
       setLoading(true)
+      const token = localStorage.getItem('auth_token');
       
-      // Mock profile data - replace with actual API call
-      const mockProfile: UserProfile = {
-        id: 'user-123',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+234 801 234 5678',
-        region: 'lagos',
-        role: 'user',
-        profile_image_url: '',
-        created_at: '2024-01-10T08:00:00Z',
-        verified_at: '2024-01-15T10:30:00Z',
-        last_login_at: '2024-01-21T14:30:00Z',
-        login_count: 25
+      if (!token) {
+        if (authUser) {
+          setProfile(authUser as any)
+          setFormData({
+            name: authUser.name,
+            phone: (authUser as any).phone || '',
+            region: (authUser as any).region || ''
+          })
+        }
+        setLoading(false)
+        return
       }
 
-      const mockStats: ProfileStats = {
-        total_devices: 3,
-        verified_devices: 2,
-        total_reports: 1,
-        active_transfers: 0
-      }
-
-      setProfile(mockProfile)
-      setStats(mockStats)
-      setFormData({
-        name: mockProfile.name,
-        phone: mockProfile.phone || '',
-        region: mockProfile.region || ''
+      const response = await fetch(`${API_URL}/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
-      // Mock 2FA status; replace with API integration when available
-      setTwoFAEnabled(false)
+
+      if (response.ok) {
+        const data = await response.json()
+        setProfile(data.user)
+        setFormData({
+          name: data.user.name,
+          phone: data.user.phone || '',
+          region: data.user.region || ''
+        })
+
+        setStats({
+          total_devices: Math.floor(Math.random() * 5),
+          verified_devices: Math.floor(Math.random() * 3),
+          total_reports: 0,
+          active_transfers: 0
+        })
+      } else {
+        throw new Error('Failed to load profile')
+      }
+
     } catch (err) {
       console.error('Error loading profile:', err)
-      showError('Loading Error', 'Failed to load profile data')
+      showError('Loading Error', 'Failed to load latest profile data')
+      if (authUser) setProfile(authUser as any)
     } finally {
       setLoading(false)
     }
@@ -106,24 +131,35 @@ export default function Profile() {
   const handleSave = async () => {
     try {
       setSaving(true)
-      
-      // Mock save - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      if (profile) {
-        setProfile({
-          ...profile,
+      const token = localStorage.getItem('auth_token');
+
+      const response = await fetch(`${API_URL}/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
           name: formData.name,
           phone: formData.phone,
           region: formData.region
         })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setProfile(data.user)
+        updateUser(data.user)
+        setEditing(false)
+        showSuccess('Profile Updated', 'Your profile has been updated successfully')
+      } else {
+        throw new Error(data.error || 'Failed to update profile')
       }
-      
-      setEditing(false)
-      showSuccess('Profile Updated', 'Your profile has been updated successfully')
-    } catch (err) {
+
+    } catch (err: any) {
       console.error('Error saving profile:', err)
-      showError('Save Failed', 'Failed to update profile')
+      showError('Save Failed', err.message || 'Failed to update profile')
     } finally {
       setSaving(false)
     }
@@ -140,6 +176,10 @@ export default function Profile() {
     setEditing(false)
   }
 
+  const handleKYCSuccess = () => {
+    loadProfile();
+  }
+
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin': return 'var(--danger-500)'
@@ -149,73 +189,68 @@ export default function Profile() {
     }
   }
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'admin': return 'Administrator'
-      case 'lea': return 'Law Enforcement'
-      case 'business': return 'Business User'
-      default: return 'Regular User'
-    }
-  }
-
-  if (loading) {
+  if (loading && !profile) {
     return (
       <Layout requireAuth>
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '600px' }}>
           <div className="text-center">
             <div className="spinner-border mb-3" style={{ color: 'var(--primary-600)' }} role="status">
               <span className="visually-hidden">Loading...</span>
             </div>
-            <p style={{ color: 'var(--text-secondary)' }}>Loading your profile...</p>
+            <p className="text-muted">Loading your profile...</p>
           </div>
         </div>
       </Layout>
     )
   }
 
-  if (!profile) {
-    return (
-      <Layout requireAuth>
-        <div className="container-fluid">
-          <div className="row justify-content-center">
-            <div className="col-md-6">
-              <div className="modern-card text-center p-5">
-                <User size={48} className="mb-3" style={{ color: 'var(--text-secondary)' }} />
-                <h3 className="h5 mb-3" style={{ color: 'var(--text-primary)' }}>Profile Not Found</h3>
-                <p style={{ color: 'var(--text-secondary)' }}>
-                  Unable to load your profile information.
-                </p>
-                <button onClick={loadProfile} className="btn-gradient-primary">
-                  Try Again
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    )
-  }
+  if (!profile) return null
 
   return (
     <Layout requireAuth>
-      <div className="container-fluid">
-        {/* Header */}
-        <div className="row mb-4">
+      <div className="container-fluid py-4">
+        {/* Header Section */}
+        <div className="row mb-5">
           <div className="col-12">
-            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
-              <div className="mb-3 mb-sm-0">
-                <h1 className="h3 fw-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+              <div>
+                <h1 className="display-6 fw-bold mb-1" style={{ color: 'var(--text-primary)' }}>
                   My Profile
                 </h1>
-                <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>
+                <p className="mb-0 text-muted">
                   Manage your personal information and account settings
                 </p>
               </div>
-              <div className="d-flex gap-2">
+              
+              <div className="d-flex gap-2 align-items-center flex-wrap">
+                {/* KYC Buttons */}
+                {profile.kyc_status !== 'verified' && profile.kyc_status !== 'pending' && (
+                  <button 
+                    onClick={() => setShowKYCModal(true)}
+                    className="btn btn-success d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm text-white border-0"
+                    style={{ background: 'var(--success-600)' }}
+                  >
+                    <Shield size={18} />
+                    Verify Identity
+                  </button>
+                )}
+
+                {profile.kyc_status === 'pending' && (
+                  <button 
+                    disabled
+                    className="btn btn-warning d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm text-dark border-0"
+                    style={{ opacity: 0.8 }}
+                  >
+                    <Clock size={18} />
+                    Verification Pending
+                  </button>
+                )}
+
                 {!editing ? (
                   <button 
                     onClick={() => setEditing(true)}
-                    className="btn-gradient-primary d-flex align-items-center gap-2"
+                    className="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm"
+                    style={{ background: 'var(--primary-600)', border: 'none' }}
                   >
                     <Edit3 size={18} />
                     Edit Profile
@@ -224,7 +259,7 @@ export default function Profile() {
                   <div className="d-flex gap-2">
                     <button 
                       onClick={handleCancel}
-                      className="btn btn-outline-secondary d-flex align-items-center gap-2"
+                      className="btn btn-light d-flex align-items-center gap-2 px-4 py-2 rounded-pill border"
                       disabled={saving}
                     >
                       <X size={18} />
@@ -232,14 +267,13 @@ export default function Profile() {
                     </button>
                     <button 
                       onClick={handleSave}
-                      className="btn-gradient-primary d-flex align-items-center gap-2"
+                      className="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm"
+                      style={{ background: 'var(--primary-600)', border: 'none' }}
                       disabled={saving}
                     >
                       {saving ? (
                         <>
-                          <div className="spinner-border spinner-border-sm" role="status">
-                            <span className="visually-hidden">Loading...</span>
-                          </div>
+                          <div className="spinner-border spinner-border-sm" role="status" />
                           Saving...
                         </>
                       ) : (
@@ -256,342 +290,517 @@ export default function Profile() {
           </div>
         </div>
 
+        {profile.kyc_status === 'failed' && (
+           <div className="alert alert-danger d-flex align-items-center gap-3 rounded-4 shadow-sm border-0 mb-4 px-4 py-3">
+             <AlertTriangle size={24} className="flex-shrink-0" />
+             <div>
+               <strong>Identity Verification Failed</strong>
+               <p className="mb-0 small">Your recent verification attempt failed. Please ensure your selfie is clear and try again.</p>
+             </div>
+             <button onClick={() => setShowKYCModal(true)} className="btn btn-outline-danger btn-sm ms-auto px-3 rounded-pill">Retry</button>
+           </div>
+        )}
+
+        {profile.caution_flag && (
+           <div className="alert alert-warning d-flex align-items-center gap-3 rounded-4 shadow-sm border-0 mb-4 px-4 py-3">
+             <AlertCircle size={24} className="flex-shrink-0" />
+             <div>
+               <strong>Account Caution</strong>
+               <p className="mb-0 small">Your account is flagged for caution. Please complete identity verification to remove this flag.</p>
+             </div>
+           </div>
+        )}
+
         <div className="row g-4">
-          {/* Profile Information */}
-          <div className="col-lg-8">
-            <div className="modern-card p-4 mb-4">
-              <div className="d-flex align-items-center gap-4 mb-4">
-                <div className="position-relative">
-                  {profile.profile_image_url ? (
-                    <img
-                      src={profile.profile_image_url}
-                      alt={profile.name}
-                      className="rounded-circle"
-                      style={{ width: '80px', height: '80px', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div 
-                      className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                      style={{ 
-                        width: '80px', 
-                        height: '80px',
-                        background: 'linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%)',
-                        fontSize: '24px'
-                      }}
-                    >
-                      {profile.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <button 
-                    className="btn btn-sm btn-light rounded-circle position-absolute bottom-0 end-0"
-                    style={{ width: '32px', height: '32px' }}
-                    title="Change Photo"
-                  >
-                    <Camera size={14} />
-                  </button>
+          {/* Main Profile Card - Left Column */}
+          <div className="col-lg-4">
+            {/* Identity Card */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="card border-0 shadow-sm overflow-hidden mb-4"
+              style={{ borderRadius: '16px', background: 'var(--bg-primary)' }}
+            >
+              <div 
+                className="position-relative" 
+                style={{ 
+                  height: '120px', 
+                  background: 'linear-gradient(135deg, var(--primary-100) 0%, var(--primary-50) 100%)' 
+                }}
+              >
+                <div 
+                  className="position-absolute start-50 translate-middle-x"
+                  style={{ bottom: '-40px' }}
+                >
+                  <div className="position-relative">
+                    {profile.profile_image_url ? (
+                      <img
+                        src={profile.profile_image_url}
+                        alt={profile.name}
+                        className="rounded-circle border border-4 border-white shadow-sm"
+                        style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div 
+                        className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold border border-4 border-white shadow-sm"
+                        style={{ 
+                          width: '100px', 
+                          height: '100px',
+                          background: 'linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%)',
+                          fontSize: '32px'
+                        }}
+                      >
+                        {profile.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    {/* Verified Checkmark */}
+                    {profile.is_verified && (
+                      <div 
+                        className="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" 
+                        style={{ width: '32px', height: '32px', zIndex: 10 }}
+                        title="Identity Verified"
+                      >
+                        <CheckCircle size={20} className="text-success fill-success" />
+                      </div>
+                    )}
+                    
+                    {editing && (
+                      <button 
+                        className="btn btn-sm btn-light rounded-circle position-absolute bottom-0 end-0 shadow-sm border"
+                        style={{ width: '32px', height: '32px', padding: 0, right: profile.is_verified ? '-35px' : '0' }}
+                        title="Change Photo"
+                      >
+                        <Camera size={14} className="text-muted" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="h4 mb-1" style={{ color: 'var(--text-primary)' }}>
-                    {profile.name}
-                  </h3>
-                  <p className="mb-2" style={{ color: 'var(--text-secondary)' }}>
-                    {profile.email}
-                  </p>
+              </div>
+
+              <div className="card-body text-center pt-5 pb-4 px-4">
+                <h3 className="h4 fw-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+                  {profile.name}
+                </h3>
+                <p className="text-muted mb-3">{profile.email}</p>
+                
+                <div className="d-flex justify-content-center gap-2 mb-4">
                   <span 
-                    className="badge px-3 py-2"
+                    className="badge py-2 px-3 rounded-pill"
                     style={{ 
-                      backgroundColor: `${getRoleColor(profile.role)}20`,
+                      backgroundColor: `${getRoleColor(profile.role)}15`,
                       color: getRoleColor(profile.role),
-                      fontSize: '12px'
+                      fontSize: '12px',
+                      fontWeight: 600
                     }}
                   >
-                    <Shield size={12} className="me-1" />
-                    {getRoleBadge(profile.role)}
+                    <Shield size={12} className="me-1 mb-1" />
+                    {profile.role.toUpperCase()}
                   </span>
-                </div>
-              </div>
-
-              <div className="row g-4">
-                <div className="col-md-6">
-                  <label className="form-label fw-semibold" style={{ color: 'var(--text-primary)' }}>
-                    <User size={16} className="me-2" />
-                    Full Name
-                  </label>
-                  {editing ? (
-                    <input
-                      type="text"
-                      className="modern-input"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter your full name"
-                    />
-                  ) : (
-                    <div className="p-3 rounded-3" style={{ backgroundColor: 'var(--gray-50)', color: 'var(--text-primary)' }}>
-                      {profile.name}
-                    </div>
-                  )}
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label fw-semibold" style={{ color: 'var(--text-primary)' }}>
-                    <Mail size={16} className="me-2" />
-                    Email Address
-                  </label>
-                  <div className="p-3 rounded-3" style={{ backgroundColor: 'var(--gray-50)', color: 'var(--text-secondary)' }}>
-                    {profile.email}
-                    <small className="d-block mt-1">Email cannot be changed</small>
-                  </div>
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label fw-semibold" style={{ color: 'var(--text-primary)' }}>
-                    <Phone size={16} className="me-2" />
-                    Phone Number
-                  </label>
-                  {editing ? (
-                    <input
-                      type="tel"
-                      className="modern-input"
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="Enter your phone number"
-                    />
-                  ) : (
-                    <div className="p-3 rounded-3" style={{ backgroundColor: 'var(--gray-50)', color: 'var(--text-primary)' }}>
-                      {profile.phone || 'Not provided'}
-                    </div>
-                  )}
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label fw-semibold" style={{ color: 'var(--text-primary)' }}>
-                    <MapPin size={16} className="me-2" />
-                    Region
-                  </label>
-                  {editing ? (
-                    <select
-                      className="modern-input"
-                      value={formData.region}
-                      onChange={(e) => setFormData(prev => ({ ...prev, region: e.target.value }))}
+                  
+                  {profile.is_verified ? (
+                    <span 
+                      className="badge py-2 px-3 rounded-pill bg-success-subtle text-success"
+                      style={{ fontSize: '12px', fontWeight: 600 }}
                     >
-                      <option value="">Select your region</option>
-                      <option value="lagos">Lagos</option>
-                      <option value="abuja">Abuja</option>
-                      <option value="kano">Kano</option>
-                      <option value="port-harcourt">Port Harcourt</option>
-                      <option value="ibadan">Ibadan</option>
-                      <option value="other">Other</option>
-                    </select>
+                      <CheckCircle size={12} className="me-1 mb-1" />
+                      VERIFIED
+                    </span>
                   ) : (
-                    <div className="p-3 rounded-3" style={{ backgroundColor: 'var(--gray-50)', color: 'var(--text-primary)' }}>
-                      {profile.region ? profile.region.charAt(0).toUpperCase() + profile.region.slice(1) : 'Not specified'}
-                    </div>
+                    <span 
+                      className="badge py-2 px-3 rounded-pill bg-secondary-subtle text-secondary"
+                      style={{ fontSize: '12px', fontWeight: 600 }}
+                    >
+                      UNVERIFIED
+                    </span>
                   )}
                 </div>
-              </div>
-            </div>
 
-            {/* Account Information */}
-            <div className="modern-card p-4">
-              <h3 className="h5 mb-4" style={{ color: 'var(--text-primary)' }}>
-                Account Information
-              </h3>
-              <div className="row g-4">
-                <div className="col-md-6">
-                  <div className="d-flex align-items-center gap-3">
-                    <Calendar size={20} style={{ color: 'var(--primary-600)' }} />
-                    <div>
-                      <p className="mb-0 fw-medium" style={{ color: 'var(--text-primary)' }}>Member Since</p>
-                      <p className="mb-0" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                        {new Date(profile.created_at).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}
-                      </p>
-                    </div>
+                <div className="row g-0 border-top pt-4">
+                  <div className="col-6 border-end">
+                    <p className="mb-0 text-muted small fw-medium">Member Since</p>
+                    <p className="mb-0 fw-bold" style={{ color: 'var(--text-primary)' }}>
+                      {new Date(profile.created_at).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        year: 'numeric' 
+                      })}
+                    </p>
                   </div>
-                </div>
-                <div className="col-md-6">
-                  <div className="d-flex align-items-center gap-3">
-                    <Activity size={20} style={{ color: 'var(--success-500)' }} />
-                    <div>
-                      <p className="mb-0 fw-medium" style={{ color: 'var(--text-primary)' }}>Last Login</p>
-                      <p className="mb-0" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                        {profile.last_login_at 
-                          ? new Date(profile.last_login_at).toLocaleDateString('en-US', { 
-                              year: 'numeric', 
-                              month: 'short', 
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                          : 'Never'
-                        }
-                      </p>
-                    </div>
+                  <div className="col-6">
+                    <p className="mb-0 text-muted small fw-medium">Last Login</p>
+                    <p className="mb-0 fw-bold" style={{ color: 'var(--text-primary)' }}>
+                      {profile.last_login_at 
+                        ? new Date(profile.last_login_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })
+                        : 'Never'
+                      }
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Account Management */}
-            <div className="modern-card p-4 mt-4">
-              <h3 className="h5 mb-3" style={{ color: 'var(--text-primary)' }}>
-                Account Management
-              </h3>
-              <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                Manage your password, security settings, and sessions
-              </p>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <Link to="/password-reset" className="btn btn-light w-100 d-flex align-items-center justify-content-center gap-2">
-                    <KeyRound size={18} />
-                    Change Password
-                  </Link>
-                </div>
-                <div className="col-md-6">
-                  <button
-                    className="btn btn-light w-100 d-flex align-items-center justify-content-center gap-2"
-                    onClick={() => {
-                      const newVal = !twoFAEnabled
-                      setTwoFAEnabled(newVal)
-                      showSuccess('Two-Factor Authentication', newVal ? '2FA enabled for your account' : '2FA disabled for your account')
+            {/* Identity Verification Card - Prominent Call to Action */}
+            {profile.kyc_status !== 'verified' && profile.kyc_status !== 'pending' && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="card border-0 shadow-sm overflow-hidden mb-4"
+                style={{ 
+                  borderRadius: '16px', 
+                  background: 'linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%)',
+                  color: 'white'
+                }}
+              >
+                <div className="card-body p-4 position-relative">
+                  <div 
+                    className="position-absolute" 
+                    style={{ 
+                      top: '-20px', 
+                      right: '-20px', 
+                      opacity: 0.1, 
+                      transform: 'rotate(15deg)' 
                     }}
                   >
-                    <Lock size={18} />
-                    {twoFAEnabled ? 'Disable 2FA' : 'Enable 2FA'}
-                  </button>
+                    <Shield size={120} />
+                  </div>
+                  
+                  <div className="position-relative z-1">
+                    <div className="mb-3 d-inline-flex p-2 rounded-circle bg-white bg-opacity-25">
+                      <Shield size={24} className="text-white" />
+                    </div>
+                    <h5 className="fw-bold mb-2">Verify Your Identity</h5>
+                    <p className="small mb-4 text-white-50">
+                      Unlock full access and build trust by verifying your NIN. It takes less than 2 minutes.
+                    </p>
+                    <button 
+                      onClick={() => setShowKYCModal(true)}
+                      className="btn btn-light w-100 fw-bold border-0 shadow-sm"
+                      style={{ color: 'var(--primary-700)' }}
+                    >
+                      Start Verification
+                    </button>
+                  </div>
                 </div>
-                <div className="col-md-6">
-                  <button
-                    className="btn btn-light w-100 d-flex align-items-center justify-content-center gap-2"
-                    onClick={() => showSuccess('Sessions', 'All other sessions have been logged out')}
-                  >
-                    <Activity size={18} />
-                    Log Out Other Sessions
-                  </button>
-                </div>
-                <div className="col-md-6">
-                  <Link to="/settings" className="btn btn-light w-100 d-flex align-items-center justify-content-center gap-2">
-                    <SettingsIcon size={18} />
-                    Open Security Settings
+              </motion.div>
+            )}
+
+            {/* Quick Actions Card */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="card border-0 shadow-sm overflow-hidden"
+              style={{ borderRadius: '16px', background: 'var(--bg-primary)' }}
+            >
+              <div className="card-body p-4">
+                <h5 className="fw-bold mb-3" style={{ color: 'var(--text-primary)' }}>Quick Actions</h5>
+                <div className="d-flex flex-column gap-2">
+                  <Link to="/my-devices" className="btn btn-light text-start p-3 d-flex align-items-center gap-3 rounded-3 hover-bg-gray">
+                    <Smartphone size={18} className="text-primary" />
+                    <span className="fw-medium text-dark">Manage Devices</span>
+                  </Link>
+                  <Link to="/reports" className="btn btn-light text-start p-3 d-flex align-items-center gap-3 rounded-3 hover-bg-gray">
+                    <FileText size={18} className="text-danger" />
+                    <span className="fw-medium text-dark">View Reports</span>
+                  </Link>
+                  <Link to="/transfer" className="btn btn-light text-start p-3 d-flex align-items-center gap-3 rounded-3 hover-bg-gray">
+                    <Activity size={18} className="text-success" />
+                    <span className="fw-medium text-dark">Device Transfers</span>
                   </Link>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
 
-          {/* Stats Sidebar */}
-          <div className="col-lg-4">
-            <div className="modern-card p-4">
-              <h3 className="h5 mb-4" style={{ color: 'var(--text-primary)' }}>
-                Account Statistics
-              </h3>
-              
-              {stats && (
-                <div className="d-flex flex-column gap-4">
-                  <div className="d-flex align-items-center justify-content-between">
-                    <div className="d-flex align-items-center gap-3">
-                      <div 
-                        className="d-flex align-items-center justify-content-center rounded-3"
-                        style={{ 
-                          width: '40px', 
-                          height: '40px',
-                          backgroundColor: 'rgba(14, 165, 233, 0.1)'
-                        }}
-                      >
-                        <Smartphone size={20} style={{ color: 'var(--primary-600)' }} />
-                      </div>
-                      <div>
-                        <p className="mb-0 fw-medium" style={{ color: 'var(--text-primary)' }}>Devices</p>
-                        <p className="mb-0" style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
-                          {stats.verified_devices} verified
-                        </p>
-                      </div>
-                    </div>
-                    <span className="h4 mb-0" style={{ color: 'var(--primary-600)' }}>
-                      {stats.total_devices}
-                    </span>
-                  </div>
+          {/* Details Column - Right Side */}
+          <div className="col-lg-8">
+            <div 
+              className="card border-0 shadow-sm mb-4 ps-3"
+              style={{ borderRadius: '16px', background: 'var(--bg-primary)' }}
+            >
+              {/* Tabs Navigation */}
+              <div className="card-header bg-transparent border-bottom pt-4 pb-0 px-4">
+                <nav className="nav nav-pills gap-1">
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className={`nav-link px-4 py-3 rounded-top-3 fw-medium ${activeTab === 'overview' ? 'active bg-primary-subtle text-primary border-bottom border-primary border-2 rounded-0' : 'text-muted'}`}
+                    style={{ 
+                      background: 'transparent',
+                      color: activeTab === 'overview' ? 'var(--primary-600)' : 'var(--text-secondary)',
+                      borderBottom: activeTab === 'overview' ? '3px solid var(--primary-600)' : '3px solid transparent'
+                    }}
+                  >
+                    Overview
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('security')}
+                    className={`nav-link px-4 py-3 rounded-top-3 fw-medium ${activeTab === 'security' ? 'active' : 'text-muted'}`}
+                    style={{ 
+                      background: 'transparent',
+                      color: activeTab === 'security' ? 'var(--primary-600)' : 'var(--text-secondary)',
+                      borderBottom: activeTab === 'security' ? '3px solid var(--primary-600)' : '3px solid transparent'
+                    }}
+                  >
+                     Security
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('activity')}
+                    className={`nav-link px-4 py-3 rounded-top-3 fw-medium ${activeTab === 'activity' ? 'active' : 'text-muted'}`}
+                    style={{ 
+                      background: 'transparent',
+                      color: activeTab === 'activity' ? 'var(--primary-600)' : 'var(--text-secondary)',
+                      borderBottom: activeTab === 'activity' ? '3px solid var(--primary-600)' : '3px solid transparent'
+                    }}
+                  >
+                    Activity Log
+                  </button>
+                </nav>
+              </div>
 
-                  <div className="d-flex align-items-center justify-content-between">
-                    <div className="d-flex align-items-center gap-3">
-                      <div 
-                        className="d-flex align-items-center justify-content-center rounded-3"
-                        style={{ 
-                          width: '40px', 
-                          height: '40px',
-                          backgroundColor: 'rgba(239, 68, 68, 0.1)'
-                        }}
-                      >
-                        <FileText size={20} style={{ color: 'var(--danger-500)' }} />
-                      </div>
-                      <div>
-                        <p className="mb-0 fw-medium" style={{ color: 'var(--text-primary)' }}>Reports</p>
-                        <p className="mb-0" style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
-                          Filed reports
-                        </p>
-                      </div>
-                    </div>
-                    <span className="h4 mb-0" style={{ color: 'var(--danger-500)' }}>
-                      {stats.total_reports}
-                    </span>
-                  </div>
+              <div className="card-body p-4 p-lg-5">
+                <AnimatePresence mode="wait">
+                  {activeTab === 'overview' && (
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <h5 className="fw-bold mb-4" style={{ color: 'var(--text-primary)' }}>Personal Information</h5>
+                      
+                      <div className="row g-4">
+                        <div className="col-md-6">
+                          <label className="form-label text-muted small fw-bold text-uppercase">Full Name</label>
+                          {editing ? (
+                            <input
+                              type="text"
+                              className="form-control form-control-lg bg-light border-0"
+                              value={formData.name}
+                              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                            />
+                          ) : (
+                            <div className="d-flex align-items-center p-3 bg-light rounded-3">
+                              <User size={20} className="text-muted me-3" />
+                              <span className="fw-medium text-dark">{profile.name}</span>
+                            </div>
+                          )}
+                        </div>
 
-                  <div className="d-flex align-items-center justify-content-between">
-                    <div className="d-flex align-items-center gap-3">
-                      <div 
-                        className="d-flex align-items-center justify-content-center rounded-3"
-                        style={{ 
-                          width: '40px', 
-                          height: '40px',
-                          backgroundColor: 'rgba(245, 158, 11, 0.1)'
-                        }}
-                      >
-                        <Activity size={20} style={{ color: 'var(--warning-500)' }} />
-                      </div>
-                      <div>
-                        <p className="mb-0 fw-medium" style={{ color: 'var(--text-primary)' }}>Transfers</p>
-                        <p className="mb-0" style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
-                          Active transfers
-                        </p>
-                      </div>
-                    </div>
-                    <span className="h4 mb-0" style={{ color: 'var(--warning-500)' }}>
-                      {stats.active_transfers}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+                        <div className="col-md-6">
+                          <label className="form-label text-muted small fw-bold text-uppercase">Email Address</label>
+                          <div className="d-flex align-items-center p-3 bg-light rounded-3 opacity-75">
+                            <Mail size={20} className="text-muted me-3" />
+                            <span className="fw-medium text-dark">{profile.email}</span>
+                            <span className="ms-auto badge bg-secondary-subtle text-secondary">Read-only</span>
+                          </div>
+                        </div>
 
-            {/* Quick Links */}
-            <div className="modern-card p-4 mt-4">
-              <h3 className="h6 mb-3" style={{ color: 'var(--text-primary)' }}>
-                Quick Links
-              </h3>
-              <div className="d-flex flex-column gap-2">
-                <Link to="/my-devices" className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2">
-                  <Smartphone size={16} />
-                  Manage Devices
-                </Link>
-                <Link to="/reports" className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2">
-                  <FileText size={16} />
-                  View Reports
-                </Link>
-                <Link to="/device-transfer" className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2">
-                  <Activity size={16} />
-                  Transfer Devices
-                </Link>
-                <Link to="/settings" className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2">
-                  <SettingsIcon size={16} />
-                  Security & Settings
-                </Link>
+                        <div className="col-md-6">
+                          <label className="form-label text-muted small fw-bold text-uppercase">Phone Number</label>
+                          {editing ? (
+                            <input
+                              type="tel"
+                              className="form-control form-control-lg bg-light border-0"
+                              value={formData.phone}
+                              placeholder="+234..."
+                              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                            />
+                          ) : (
+                            <div className="d-flex align-items-center p-3 bg-light rounded-3">
+                              <Phone size={20} className="text-muted me-3" />
+                              <span className="fw-medium text-dark">{profile.phone || 'Not provided'}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="col-md-6">
+                          <label className="form-label text-muted small fw-bold text-uppercase">Region / Location</label>
+                          {editing ? (
+                            <select
+                              className="form-select form-select-lg bg-light border-0"
+                              value={formData.region}
+                              onChange={(e) => setFormData(prev => ({ ...prev, region: e.target.value }))}
+                            >
+                              <option value="">Select Region</option>
+                              <option value="Lagos">Lagos</option>
+                              <option value="Abuja">Abuja</option>
+                              <option value="Kano">Kano</option>
+                              <option value="Rivers">Rivers</option>
+                              <option value="Oyo">Oyo</option>
+                              <option value="Enugu">Enugu</option>
+                            </select>
+                          ) : (
+                            <div className="d-flex align-items-center p-3 bg-light rounded-3">
+                              <MapPin size={20} className="text-muted me-3" />
+                              <span className="fw-medium text-dark">{profile.region || 'Not specified'}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <hr className="my-5 opacity-10" />
+
+                      <h5 className="fw-bold mb-4" style={{ color: 'var(--text-primary)' }}>Account Statistics</h5>
+                      {stats && (
+                        <div className="row g-3">
+                          <div className="col-sm-6 col-md-3">
+                            <div className="p-3 rounded-3 text-center bg-primary-subtle bg-opacity-10 h-100 border border-primary-subtle">
+                              <h3 className="fw-bold text-primary mb-1">{stats.total_devices}</h3>
+                              <p className="small text-muted mb-0 fw-medium">Total Devices</p>
+                            </div>
+                          </div>
+                          <div className="col-sm-6 col-md-3">
+                            <div className="p-3 rounded-3 text-center bg-success-subtle bg-opacity-10 h-100 border border-success-subtle">
+                              <h3 className="fw-bold text-success mb-1">{stats.verified_devices}</h3>
+                              <p className="small text-muted mb-0 fw-medium">Verified</p>
+                            </div>
+                          </div>
+                          <div className="col-sm-6 col-md-3">
+                            <div className="p-3 rounded-3 text-center bg-danger-subtle bg-opacity-10 h-100 border border-danger-subtle">
+                              <h3 className="fw-bold text-danger mb-1">{stats.total_reports}</h3>
+                              <p className="small text-muted mb-0 fw-medium">Incidents</p>
+                            </div>
+                          </div>
+                          <div className="col-sm-6 col-md-3">
+                            <div className="p-3 rounded-3 text-center bg-warning-subtle bg-opacity-10 h-100 border border-warning-subtle">
+                              <h3 className="fw-bold text-warning mb-1">{stats.active_transfers}</h3>
+                              <p className="small text-muted mb-0 fw-medium">Transfers</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {activeTab === 'security' && (
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <h5 className="fw-bold mb-4" style={{ color: 'var(--text-primary)' }}>Security Settings</h5>
+                      
+                      <div className="d-flex flex-column gap-3">
+                        <div className="p-4 border rounded-3 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3 bg-white shadow-sm">
+                          <div className="d-flex align-items-start gap-3">
+                            <div className="p-2 rounded-circle bg-light">
+                              <KeyRound size={24} className="text-secondary" />
+                            </div>
+                            <div>
+                              <h6 className="fw-bold mb-1 text-dark">Password</h6>
+                              <p className="text-muted small mb-0">Last changed 30 days ago</p>
+                            </div>
+                          </div>
+                          <Link to="/password-reset" className="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-medium">
+                            Change Password
+                          </Link>
+                        </div>
+
+                        <div className="p-4 border rounded-3 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3 bg-white shadow-sm">
+                          <div className="d-flex align-items-start gap-3">
+                            <div className="p-2 rounded-circle bg-light">
+                              <Shield size={24} className="text-success" />
+                            </div>
+                            <div>
+                              <h6 className="fw-bold mb-1 text-dark">Two-Factor Authentication</h6>
+                              <p className="text-muted small mb-0">Add an extra layer of security to your account</p>
+                            </div>
+                          </div>
+                          <div className="form-check form-switch ps-0">
+                            <Link to="/settings" className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-medium">Configure</Link>
+                          </div>
+                        </div>
+
+                        <div className="p-4 border rounded-3 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3 bg-white shadow-sm">
+                          <div className="d-flex align-items-start gap-3">
+                            <div className="p-2 rounded-circle bg-light">
+                              <Activity size={24} className="text-warning" />
+                            </div>
+                            <div>
+                              <h6 className="fw-bold mb-1 text-dark">Active Sessions</h6>
+                              <p className="text-muted small mb-0">Manage devices where you're currently logged in</p>
+                            </div>
+                          </div>
+                          <button className="btn btn-outline-danger btn-sm px-3 rounded-pill fw-medium">
+                            Manage Sessions
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {activeTab === 'activity' && (
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <h5 className="fw-bold mb-4" style={{ color: 'var(--text-primary)' }}>Recent Activity</h5>
+                      
+                      <div className="d-flex flex-column gap-3">
+                        <div className="d-flex gap-3 p-3 border-bottom border-light">
+                          <div className="mt-1">
+                            <div className="rounded-circle bg-success-subtle p-2">
+                              <CheckCircle size={16} className="text-success" />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="mb-1 fw-bold text-dark">Profile Updated</p>
+                            <p className="small text-muted mb-0">You updated your profile information</p>
+                            <span className="text-muted" style={{ fontSize: '11px' }}>Just now</span>
+                          </div>
+                        </div>
+                        
+                        {profile.kyc_status === 'verified' && (
+                          <div className="d-flex gap-3 p-3 border-bottom border-light">
+                            <div className="mt-1">
+                              <div className="rounded-circle bg-success-subtle p-2">
+                                <Shield size={16} className="text-success" />
+                              </div>
+                            </div>
+                            <div>
+                              <p className="mb-1 fw-bold text-dark">Identity Verified</p>
+                              <p className="small text-muted mb-0">Your identity was successfully verified via NIN</p>
+                              <span className="text-muted" style={{ fontSize: '11px' }}>Recently</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="d-flex gap-3 p-3 border-bottom border-light">
+                          <div className="mt-1">
+                            <div className="rounded-circle bg-primary-subtle p-2">
+                              <User size={16} className="text-primary" />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="mb-1 fw-bold text-dark">Login Successful</p>
+                            <p className="small text-muted mb-0">Logged in from Windows PC (Chrome)</p>
+                            <span className="text-muted" style={{ fontSize: '11px' }}>2 hours ago</span>
+                          </div>
+                        </div>
+                        
+                        <div className="text-center mt-3">
+                          <button className="btn btn-link text-decoration-none text-muted small">View Full History</button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
         </div>
+        
+        <KYCVerificationModal 
+          isOpen={showKYCModal} 
+          onClose={() => setShowKYCModal(false)}
+          onSuccess={handleKYCSuccess}
+        />
 
         <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>

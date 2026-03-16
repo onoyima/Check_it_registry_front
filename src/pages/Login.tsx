@@ -20,6 +20,7 @@ import OTPVerification from '../components/OTPVerification'
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -72,6 +73,7 @@ export default function Login() {
         body: JSON.stringify({
           email: email.trim(),
           password,
+          remember_device: rememberMe,
         }),
       })
 
@@ -333,6 +335,8 @@ export default function Login() {
                       className="form-check-input"
                       type="checkbox"
                       id="rememberMe"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
                     />
                     <label className="form-check-label text-white opacity-75" htmlFor="rememberMe">
                       Remember me

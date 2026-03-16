@@ -3,6 +3,7 @@ import { Layout } from '../components/Layout'
 import { useToast, ToastContainer } from '../components/Toast'
 import { motion } from 'framer-motion'
 import { Receipt, Filter, Smartphone } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 type SellerOrder = {
   id: string
@@ -10,42 +11,62 @@ type SellerOrder = {
   buyer: string
   amount: number
   currency: string
-  status: 'pending' | 'paid' | 'shipped' | 'completed' | 'cancelled'
+  status: 'pending' | 'paid' | 'shipped' | 'completed' | 'cancelled' | 'sold'
   date: string
+  buyer_email?: string
 }
 
 export default function SellerOrders() {
   const [orders, setOrders] = useState<SellerOrder[]>([])
-  const [status, setStatus] = useState<'all'|'pending'|'paid'|'shipped'|'completed'|'cancelled'>('all')
-  const { toasts, removeToast, showSuccess } = useToast()
+  const [status, setStatus] = useState<'all'|'pending'|'paid'|'shipped'|'completed'|'cancelled'|'sold'>('all')
+  const [loading, setLoading] = useState(true)
+  const { toasts, removeToast, showSuccess, showError } = useToast()
 
   useEffect(() => {
-    const sample: SellerOrder[] = [
-      { id: 's1', product: 'iPhone 13 128GB', buyer: 'John Doe', amount: 750000, currency: '₦', status: 'paid', date: '2025-10-01' },
-      { id: 's2', product: 'Samsung S22 256GB', buyer: 'Ada Lovelace', amount: 680000, currency: '₦', status: 'pending', date: '2025-10-10' },
-      { id: 's3', product: 'Tecno Spark 8', buyer: 'Kwame N', amount: 120000, currency: '₦', status: 'shipped', date: '2025-10-15' },
-    ]
-    setOrders(sample)
+    fetchOrders()
   }, [])
+
+  const fetchOrders = async () => {
+    try {
+        setLoading(true)
+        // @ts-ignore
+        const data = await supabase.marketplace.getSellerOrders()
+        const mapped = data.map((o: any) => ({
+            id: o.id,
+            product: `${o.brand} ${o.model}`,
+            buyer: o.buyer_name || 'Unknown',
+            buyer_email: o.buyer_email,
+            amount: Number(o.price),
+            currency: o.currency,
+            status: o.status, // might be 'sold' initially
+            date: new Date(o.sold_at || o.updated_at).toLocaleDateString()
+        }))
+        setOrders(mapped)
+    } catch (err: any) {
+        console.error(err)
+        showError('Error', 'Failed to load orders')
+    } finally {
+        setLoading(false)
+    }
+  }
 
   const filtered = useMemo(() => orders.filter(o => status === 'all' || o.status === status), [orders, status])
   const currency = (n: number, c = '₦') => `${c}${n.toLocaleString()}`
 
-  const markShipped = (id: string) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'shipped' } : o))
-    showSuccess('Order marked as shipped')
-  }
-  const confirmPayment = (id: string) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'paid' } : o))
-    showSuccess('Payment confirmed')
-  }
-  const cancelOrder = (id: string) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'cancelled' } : o))
-    showSuccess('Order cancelled')
+  const updateStatus = async (id: string, newStatus: string) => {
+      try {
+          if (!window.confirm(`Mark this order as ${newStatus}?`)) return
+          // @ts-ignore
+          await supabase.marketplace.update(id, { status: newStatus })
+          showSuccess(`Order updated to ${newStatus}`)
+          fetchOrders()
+      } catch (err: any) {
+          showError('Failed', err.message)
+      }
   }
 
   return (
-    <Layout requireAuth>
+    <Layout requireAuth allowedRoles={["business"]}>
       <div className="container-fluid">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <div className="d-flex align-items-center justify-content-between mb-3">
@@ -57,41 +78,44 @@ export default function SellerOrders() {
             <Filter size={16} />
             <select value={status} onChange={e => setStatus(e.target.value as any)} className="form-select form-select-sm" style={{ width: 180 }}>
               <option value="all">All</option>
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
+              <option value="sold">Sold (New)</option>
               <option value="shipped">Shipped</option>
               <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
             </select>
           </div>
         </div>
 
         <div className="row g-3">
-          {filtered.map((o, i) => (
+          {loading ? <div className="text-center p-5">Loading orders...</div> : filtered.length === 0 ? (
+             <div className="col-12"><div className="modern-card p-4 text-center text-secondary">No seller orders found</div></div>
+          ) : filtered.map((o, i) => (
             <motion.div key={o.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="col-12">
-              <div className="modern-card p-3 d-flex align-items-center justify-content-between">
+              <div className="modern-card p-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
                 <div className="d-flex align-items-center gap-3">
                   <Smartphone size={20} style={{ color: 'var(--text-secondary)' }} />
                   <div>
                     <strong>{o.product}</strong>
-                    <div className="text-secondary"><small>Buyer: {o.buyer} • Placed {o.date}</small></div>
+                    <div className="text-secondary"><small>Buyer: {o.buyer} ({o.buyer_email || 'No email'}) • Sold on {o.date}</small></div>
                   </div>
                 </div>
                 <div className="d-flex align-items-center gap-2">
                   <div className="text-end me-3">
                     <div className="fw-bold">{currency(o.amount, o.currency)}</div>
-                    <small className="text-secondary text-capitalize">{o.status}</small>
+                    <span className={`badge bg-${o.status === 'completed' ? 'success' : o.status === 'sold' ? 'primary' : 'secondary'}`}>{o.status}</span>
                   </div>
-                  <button className="btn btn-sm btn-outline-primary" onClick={() => confirmPayment(o.id)}>Confirm Payment</button>
-                  <button className="btn btn-sm btn-outline-secondary" onClick={() => markShipped(o.id)}>Mark Shipped</button>
-                  <button className="btn btn-sm btn-outline-danger" onClick={() => cancelOrder(o.id)}>Cancel</button>
+                  {o.status === 'sold' && (
+                      <>
+                        <button className="btn btn-sm btn-outline-primary" onClick={() => updateStatus(o.id, 'shipped')}>Mark Shipped</button>
+                      </>
+                  )}
+                  {o.status === 'shipped' && (
+                      <button className="btn btn-sm btn-outline-success" onClick={() => updateStatus(o.id, 'completed')}>Complete</button>
+                  )}
+                  {/* Cancel logic is tricky - requires refund. Skip for MVP unless requested specifically.*/}
                 </div>
               </div>
             </motion.div>
           ))}
-          {filtered.length === 0 && (
-            <div className="col-12"><div className="modern-card p-4 text-center text-secondary">No seller orders</div></div>
-          )}
         </div>
       </div>
     </Layout>

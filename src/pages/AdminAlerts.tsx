@@ -56,7 +56,7 @@ export default function AdminAlerts() {
       setLoading(true)
       setError(null)
       const token = localStorage.getItem('auth_token')
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {}
 
       const [reportedRes, alertsRes] = await Promise.all([
         fetch('http://localhost:3006/api/admin-portal/reported-devices?page=1&limit=50', { headers }),

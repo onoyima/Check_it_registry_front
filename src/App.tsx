@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import LandingContentManager from './pages/admin/LandingContentManager'
 import DeviceCheck from './pages/DeviceCheck'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import LandingPage from './pages/LandingPage'
 import Dashboard from './pages/Dashboard'
 import DeviceRegistration from './pages/DeviceRegistration'
 import MyDevices from './pages/MyDevices'
@@ -62,10 +64,13 @@ import AuditTrail from './pages/AuditTrail'
 import AdminTransferHistory from './pages/AdminTransferHistory'
 import LEATransferHistory from './pages/LEATransferHistory'
 import Profile from './pages/Profile'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 import Settings from './pages/Settings'
+import Checkout from './pages/Checkout'
 import './App.css'
 import { ToastProvider } from './components/Toast'
 import NotFound from './pages/NotFound'
+import AdminMarketplaceManagement from './pages/AdminMarketplaceManagement'
 
 interface AppProps {}
 
@@ -88,7 +93,7 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
         <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
@@ -152,7 +157,13 @@ function AppRoutes() {
         <Route path="/orders" element={user ? <BuyerOrders /> : <Navigate to="/login" />} />
         <Route path="/seller/orders" element={user ? <SellerOrders /> : <Navigate to="/login" />} />
         <Route path="/business/payouts" element={user ? <BusinessPayouts /> : <Navigate to="/login" />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+
+
         <Route path="/admin/device-categories" element={user ? <AdminDeviceCategories /> : <Navigate to="/login" />} />
+        <Route path="/admin/landing-content" element={user ? <ErrorBoundary><LandingContentManager /></ErrorBoundary> : <Navigate to="/login" />} />
+        <Route path="/admin/marketplace" element={user ? <ErrorBoundary><AdminMarketplaceManagement /></ErrorBoundary> : <Navigate to="/login" />} />
+        <Route path="/checkout" element={user ? <Checkout /> : <Navigate to="/login" />} />
         {/* Catch-all route: send all unknown links to NotFound with back to dashboard */}
         <Route path="*" element={<NotFound />} />
       </Routes>

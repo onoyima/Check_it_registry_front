@@ -429,7 +429,7 @@ export default function ReportMissing() {
                         </>
                       ) : (
                         <>
-                          🚨 File {reportType === 'theft' ? 'Theft' : 'Loss'} Report
+                          🚨 File {reportType === 'stolen' ? 'Theft' : 'Loss'} Report
                         </>
                       )}
                     </button>

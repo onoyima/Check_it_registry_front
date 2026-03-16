@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { Layout } from '../components/Layout'
 import { useToast, ToastContainer } from '../components/Toast'
 import { motion } from 'framer-motion'
@@ -72,81 +73,66 @@ export default function MarketplaceListing() {
   const [showAllReviews, setShowAllReviews] = useState(false)
 
   useEffect(() => {
-    // Mock data for demonstration
-    const mockListing: Listing = {
-      id: id || 'l1',
-      title: 'iPhone 13 128GB',
-      brand: 'Apple',
-      model: 'iPhone 13',
-      storage: '128GB',
-      color: 'Midnight',
-      condition: 'used',
-      price: 750000,
-      currency: '₦',
-      location: 'Lagos, Nigeria',
-      verified: true,
-      description: 'Excellent condition iPhone 13 with original accessories. Battery health at 95%. No scratches or dents. Comes with original box, charger, and unused EarPods. Perfect for anyone looking for a premium smartphone experience.',
-      images: [
-        'https://images.unsplash.com/photo-1616348436168-23e257d9cbfd?q=80&w=800&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?q=80&w=800&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1605236453806-b25e5d5cce04?q=80&w=800&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?q=80&w=800&auto=format&fit=crop'
-      ],
-      category: 'Smartphones',
-      seller: {
-        name: 'TechStore Lagos',
-        rating: 4.9,
-        verified: true,
-        joinDate: '2022-03-15',
-        totalSales: 156
-      },
-      specifications: {
-        'Display': '6.1-inch Super Retina XDR',
-        'Processor': 'A15 Bionic chip',
-        'Storage': '128GB',
-        'Camera': '12MP Dual-camera system',
-        'Battery': '95% health',
-        'OS': 'iOS 17',
-        'Warranty': '6 months seller warranty'
-      },
-      rating: 4.8,
-      reviewCount: 24,
-      reviews: [
-        {
-          id: 'r1',
-          userId: 'u1',
-          userName: 'John Doe',
-          rating: 5,
-          comment: 'Excellent phone! Exactly as described. Fast shipping and great communication from seller.',
-          date: '2024-01-15',
-          verified: true
-        },
-        {
-          id: 'r2',
-          userId: 'u2',
-          userName: 'Sarah Johnson',
-          rating: 4,
-          comment: 'Good condition phone. Battery life is great. Minor wear but nothing major.',
-          date: '2024-01-10',
-          verified: true
-        },
-        {
-          id: 'r3',
-          userId: 'u3',
-          userName: 'Mike Chen',
-          rating: 5,
-          comment: 'Perfect transaction. Phone works flawlessly. Highly recommend this seller!',
-          date: '2024-01-08',
-          verified: false
-        }
-      ],
-      inStock: true,
-      quantity: 1
-    }
-    
-    setListing(mockListing)
-    setLoading(false)
+    fetchListing()
   }, [id])
+
+  const fetchListing = async () => {
+    if (!id) return
+    try {
+        setLoading(true)
+        // @ts-ignore
+        const data = await supabase.marketplace.get(id)
+        if (data) {
+            // Map backend data to frontend model
+            // Backend returns: { id, title, price, currency, device_condition, location, description, images, brand, model, seller_name, seller_verified, status }
+             const mapped: Listing = {
+                id: data.id,
+                title: data.title,
+                brand: data.brand,
+                model: data.model,
+                storage: data.storage_capacity,
+                color: data.color,
+                condition: data.device_condition,
+                price: typeof data.price === 'string' ? parseFloat(data.price) : data.price,
+                currency: data.currency === 'NGN' ? '₦' : data.currency,
+                location: data.location,
+                verified: data.seller_verified === 'verified',
+                description: data.description,
+                images: (typeof data.images === 'string' ? JSON.parse(data.images) : data.images) || [],
+                category: 'Electronics',
+                seller: {
+                    name: data.seller_name || 'Unknown',
+                    rating: 5.0, // Mocked rating
+                    verified: data.seller_verified === 'verified',
+                    joinDate: new Date().toISOString(), // Mocked join date
+                    totalSales: 0 // Mocked stats
+                },
+                specifications: {
+                    'Brand': data.brand,
+                    'Model': data.model,
+                    'Condition': data.device_condition,
+                    'Storage': data.storage_capacity || 'N/A',
+                    'Color': data.color || 'N/A'
+                },
+                rating: 0,
+                reviewCount: 0,
+                reviews: [],
+                inStock: data.status === 'active',
+                quantity: 1
+            }
+            // Ensure at least one image url
+            if (mapped.images.length === 0) {
+                mapped.images = ['https://images.unsplash.com/photo-1592750475338-74b7b21085ab?q=80&w=800&auto=format&fit=crop']
+            }
+            setListing(mapped)
+        }
+    } catch (err) {
+        console.error('Failed to fetch listing', err)
+        showError('Error', 'Failed to load listing details')
+    } finally {
+        setLoading(false)
+    }
+  }
 
   const handleAddToCart = () => {
     showSuccess(`Added ${cartQuantity} item(s) to cart`)

@@ -11,7 +11,8 @@ import {
   Settings,
   HelpCircle,
   Sun,
-  Moon
+  Moon,
+  Shield
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -97,6 +98,21 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
               </button>
             )}
           </div>
+
+          {/* Central Logo & Links for Guests */}
+          {!user && (
+            <div className="d-none d-lg-flex position-absolute start-50 top-50 translate-middle align-items-center gap-4" style={{ zIndex: 1045 }}>
+              <Link to="/" className="d-flex align-items-center gap-2 text-decoration-none text-dark pe-4 border-end">
+                <img src="/logo1.png" alt="Check It Logo" style={{ height: '28px', objectFit: 'contain' }} />
+                <span className="fw-bold fs-5">Check It</span>
+              </Link>
+              <div className="d-flex align-items-center gap-4">
+                <Link to="/search" className="custom-nav-link text-decoration-none">Verify Device</Link>
+                <Link to="/marketplace/browse" className="custom-nav-link text-decoration-none">Marketplace</Link>
+                <Link to="/found-device" className="custom-nav-link text-decoration-none">Report Found</Link>
+              </div>
+            </div>
+          )}
 
           {/* Right side */}
           <div className="d-flex align-items-center gap-3">
@@ -275,6 +291,15 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
                             <HelpCircle size={18} />
                             <span>Help & Support</span>
                           </Link>
+                          <Link
+                            to="/privacy"
+                            className="d-flex align-items-center gap-3 px-3 py-2 text-decoration-none rounded-2"
+                            style={{ color: 'var(--text-secondary)' }}
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            <Shield size={18} />
+                            <span>Privacy & Legal</span>
+                          </Link>
                           <hr className="my-2" style={{ borderColor: 'var(--border-color)' }} />
                           <button
                             onClick={() => {
@@ -298,14 +323,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
               <div className="d-flex align-items-center gap-2">
                 <Link
                   to="/login"
-                  className="btn btn-link text-decoration-none"
+                  className="btn btn-link text-decoration-none fw-medium"
                   style={{ color: 'var(--text-secondary)' }}
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="btn-gradient-primary text-decoration-none"
+                  className="btn btn-primary rounded-pill px-4 fw-medium text-decoration-none shadow-sm hover-scale flex-shrink-0"
                 >
                   Sign Up
                 </Link>

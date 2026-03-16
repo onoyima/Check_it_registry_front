@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../lib/supabase'
 import { Layout } from '../components/Layout'
 import { useToast, ToastContainer } from '../components/Toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -41,133 +42,55 @@ export default function MarketplaceBrowse() {
   const navigate = useNavigate()
   const { toasts, removeToast, showError } = useToast()
 
-  useEffect(() => {
-    try {
-      const mockListings: Listing[] = [
-        {
-          id: 'l1',
-          title: 'iPhone 13 128GB',
-          brand: 'Apple',
-          model: 'iPhone 13',
-          storage: '128GB',
-          color: 'Midnight',
-          condition: 'used',
-          price: 750000,
-          currency: '₦',
-          location: 'Lagos',
-          verified: true,
-          category: 'Smartphones',
-          featured: true,
-          rating: 4.8,
-          reviewCount: 24,
-          description: 'Excellent condition iPhone 13 with original accessories. Battery health at 95%.',
-          seller: {
-            name: 'TechStore Lagos',
-            rating: 4.9,
-            verified: true
-          },
-          thumbnail: 'https://images.unsplash.com/photo-1616348436168-23e257d9cbfd?q=80&w=800&auto=format&fit=crop'
-        },
-        {
-          id: 'l2',
-          title: 'Samsung Galaxy S22',
-          brand: 'Samsung',
-          model: 'Galaxy S22',
-          storage: '256GB',
-          color: 'Phantom Black',
-          condition: 'new',
-          price: 850000,
-          currency: '₦',
-          location: 'Abuja',
-          verified: true,
-          category: 'Smartphones',
-          rating: 4.6,
-          reviewCount: 18,
-          description: 'Brand new Samsung Galaxy S22 with warranty. Unopened box.',
-          seller: {
-            name: 'Mobile Hub',
-            rating: 4.7,
-            verified: true
-          },
-          thumbnail: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=800&auto=format&fit=crop'
-        },
-        {
-          id: 'l3',
-          title: 'MacBook Air M2',
-          brand: 'Apple',
-          model: 'MacBook Air',
-          storage: '512GB',
-          color: 'Space Gray',
-          condition: 'used',
-          price: 1200000,
-          currency: '₦',
-          location: 'Port Harcourt',
-          verified: false,
-          category: 'Laptops',
-          rating: 4.5,
-          reviewCount: 12,
-          description: 'Lightly used MacBook Air M2. Perfect for students and professionals.',
-          seller: {
-            name: 'GadgetWorld',
-            rating: 4.3,
-            verified: false
-          },
-          thumbnail: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?q=80&w=800&auto=format&fit=crop'
-        },
-        {
-          id: 'l4',
-          title: 'iPad Pro 11"',
-          brand: 'Apple',
-          model: 'iPad Pro',
-          storage: '128GB',
-          color: 'Silver',
-          condition: 'refurbished',
-          price: 650000,
-          currency: '₦',
-          location: 'Kano',
-          verified: true,
-          category: 'Tablets',
-          featured: true,
-          rating: 4.7,
-          reviewCount: 31,
-          description: 'Professionally refurbished iPad Pro with Apple Pencil included.',
-          seller: {
-            name: 'Apple Certified',
-            rating: 4.8,
-            verified: true
-          },
-          thumbnail: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?q=80&w=800&auto=format&fit=crop'
-        },
-        {
-          id: 'l5',
-          title: 'AirPods Pro 2nd Gen',
-          brand: 'Apple',
-          model: 'AirPods Pro',
-          condition: 'new',
-          price: 280000,
-          currency: '₦',
-          location: 'Lagos',
-          verified: true,
-          category: 'Accessories',
-          rating: 4.9,
-          reviewCount: 67,
-          description: 'Latest AirPods Pro with active noise cancellation and spatial audio.',
-          seller: {
-            name: 'AudioTech',
-            rating: 4.9,
-            verified: true
-          },
-          thumbnail: 'https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?q=80&w=800&auto=format&fit=crop'
+    useEffect(() => {
+    const fetchListings = async () => {
+        try {
+            setLoading(true)
+            setError(null)
+            // @ts-ignore
+            const data = await supabase.marketplace.list({ 
+                search: search || undefined, 
+                brand: brand === 'all' ? undefined : brand,
+                condition: condition === 'all' ? undefined : condition,
+                max_price: maxPrice || undefined
+            })
+            
+            const mapped: Listing[] = data.map((l: any) => ({
+                id: l.id,
+                title: l.title,
+                brand: l.brand,
+                model: l.model,
+                condition: l.device_condition as any,
+                price: typeof l.price === 'string' ? parseFloat(l.price) : l.price,
+                currency: l.currency === 'NGN' ? '₦' : l.currency,
+                location: l.location,
+                verified: l.seller?.verified,
+                thumbnail: (l.images && l.images.length > 0) ? l.images[0] : 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop',
+                category: 'Electronics',
+                description: l.description,
+                seller: {
+                    name: l.seller?.name || 'Unknown',
+                    verified: l.seller?.verified,
+                    rating: 5.0 
+                },
+                featured: !!l.featured,
+                rating: 0,
+                reviewCount: 0
+            }))
+            
+            setListings(mapped)
+        } catch (err: any) {
+            console.error(err)
+            setError(err.message || 'Failed to load listings. Please check backend connection.')
+        } finally {
+            setLoading(false)
         }
-      ]
-      setListings(mockListings)
-    } catch (e: any) {
-      setError('Failed to load marketplace')
-      showError('Failed to load marketplace listings')
-    } finally {
-      setLoading(false)
     }
-  }, [])
+    
+    // Debounce
+    const t = setTimeout(fetchListings, 500)
+    return () => clearTimeout(t)
+  }, [search, brand, condition, maxPrice])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()

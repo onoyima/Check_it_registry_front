@@ -3,9 +3,12 @@ import { Layout } from '../components/Layout'
 import { useToast } from '../components/Toast'
 import { useNavigate } from 'react-router-dom'
 
+import { supabase } from '../lib/supabase'
+
 export default function PaymentAddMethod() {
-  const { showSuccess } = useToast()
+  const { showSuccess, showError } = useToast()
   const navigate = useNavigate()
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     name: '',
     number: '',
@@ -23,10 +26,23 @@ export default function PaymentAddMethod() {
     setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
-  const onSave = () => {
-    if (!form.name || !form.number || !form.exp || !form.cvc) return
-    showSuccess('Payment Method Saved', `${form.name} •••• ${form.number.slice(-4)}`)
-    navigate('/payments/method-selection')
+  const onSave = async () => {
+    if (!form.name || !form.number || !form.exp || !form.cvc) {
+        showError('Validation Error', 'Please fill in all required fields')
+        return
+    }
+    
+    try {
+        setSaving(true)
+        await supabase.payments.addMethod(form)
+        showSuccess('Payment Method Saved', `${form.name} •••• ${form.number.slice(-4)}`)
+        navigate(-1)
+    } catch (err: any) {
+        console.error(err)
+        showError('Save Failed', err.message || 'Failed to save payment method')
+    } finally {
+        setSaving(false)
+    }
   }
 
   return (
@@ -102,7 +118,13 @@ export default function PaymentAddMethod() {
                 <span style={{ fontSize: 14 }}>🔒</span>
                 <small>Your payment information is encrypted and stored securely.</small>
               </div>
-              <button className="btn-gradient-primary w-100 py-3" onClick={onSave}>Save Card</button>
+              <button 
+                className="btn-gradient-primary w-100 py-3" 
+                onClick={onSave}
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Save Card'}
+              </button>
             </div>
           </div>
         </div>

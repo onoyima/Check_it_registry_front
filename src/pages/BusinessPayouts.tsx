@@ -3,6 +3,7 @@ import { Layout } from '../components/Layout'
 import { useToast, ToastContainer } from '../components/Toast'
 import { motion } from 'framer-motion'
 import { CreditCard, DollarSign, Wallet, Filter } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 type Payout = {
   id: string
@@ -13,19 +14,30 @@ type Payout = {
 }
 
 export default function BusinessPayouts() {
-  const [balance, setBalance] = useState(1250000)
+  const [balance, setBalance] = useState(0)
   const [method, setMethod] = useState('Bank Transfer')
   const [payouts, setPayouts] = useState<Payout[]>([])
   const [status, setStatus] = useState<'all'|'pending'|'processing'|'paid'>('all')
   const { toasts, removeToast, showSuccess } = useToast()
 
   useEffect(() => {
-    setPayouts([
-      { id: 'p1', amount: 500000, currency: '₦', status: 'paid', requestedAt: '2025-09-12' },
-      { id: 'p2', amount: 300000, currency: '₦', status: 'processing', requestedAt: '2025-10-18' },
-      { id: 'p3', amount: 150000, currency: '₦', status: 'pending', requestedAt: '2025-10-22' },
-    ])
+    fetchData()
   }, [])
+
+  const fetchData = async () => {
+    try {
+        const bal = await supabase.payments.getBalance()
+        if (bal && typeof bal.balance === 'number') setBalance(bal.balance)
+        
+        // Mock payouts for now, as we don't have payout table yet
+        setPayouts([
+            { id: 'p1', amount: 500000, currency: '₦', status: 'paid', requestedAt: '2025-09-12' },
+            { id: 'p2', amount: 300000, currency: '₦', status: 'processing', requestedAt: '2025-10-18' },
+        ])
+    } catch (err) {
+        console.error(err)
+    }
+  }
 
   const requestPayout = () => {
     const id = `p${payouts.length + 1}`

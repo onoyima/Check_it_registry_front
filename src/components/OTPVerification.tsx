@@ -227,7 +227,7 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
               onChange={e => setRememberDevice(e.target.checked)}
             />
             <label className="form-check-label" htmlFor="rememberDevice" style={{ color: 'var(--text-secondary)' }}>
-              Remember this device for 90 days
+              Remember this device for 30 days
             </label>
           </div>
         </div>

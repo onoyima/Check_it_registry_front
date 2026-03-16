@@ -150,9 +150,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
         { path: "/admin/device-management", label: "Device Management", icon: Smartphone },
         { path: "/admin/lea-management", label: "LEA Management", icon: Shield },
         { path: "/admin/report-management", label: "Report Management", icon: FileText },
+        { path: "/admin/marketplace", label: "Marketplace Management", icon: Inbox },
         { path: "/admin/system-settings", label: "System Settings", icon: Settings },
         { path: "/admin/device-categories", label: "Device Categories", icon: Settings },
         { path: "/admin/transfers", label: "Transfers", icon: ArrowLeftRight },
+        { path: "/admin/landing-content", label: "Landing Content", icon: FileText },
       ],
     };
 
@@ -178,7 +180,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
 
     // Build groups per role
     const role = user?.role;
-    if (role === "admin") {
+    if (role === "admin" || role === "super_admin") {
       return [adminMenu, businessMenu, leaMenu, usersMenu, marketplaceMenu, communicationMenu, settingsMenu];
     }
     if (role === "business") {

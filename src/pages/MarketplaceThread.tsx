@@ -1,28 +1,102 @@
-import React, { useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Layout } from '../components/Layout'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MoreVertical, ChevronRight, CheckCheck, Plus, Send, BadgeCheck } from 'lucide-react'
+import { ArrowLeft, MoreVertical, ChevronRight, CheckCheck, Send, BadgeCheck } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
+import { useToast, ToastContainer } from '../components/Toast'
 
 type ChatMessage = {
   id: string
-  type: 'incoming' | 'outgoing'
-  text: string
-  time: string
+  // we'll derive 'type' from sender_id match
+  sender_id: string
+  content: string
+  created_at: string
 }
 
 export default function MarketplaceThread() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { toasts, removeToast, showError } = useToast()
+  
+  const [listing, setListing] = useState<any>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  
+  const scrollRef = useRef<HTMLDivElement>(null)
 
-  const messages: ChatMessage[] = useMemo(() => ([
-    { id: 'm1', type: 'incoming', text: "Hi, is this still available? What's the battery health like?", time: '10:30 AM' },
-    { id: 'm2', type: 'outgoing', text: "Yes, it's available! The battery health is at 92%.", time: '10:31 AM' },
-    { id: 'm3', type: 'incoming', text: 'Great. Would you consider $750?', time: '10:32 AM' },
-  ]), [])
+  useEffect(() => {
+    if (!id || !user) return
+    fetchData()
+    // Poll for messages every 5s
+    const interval = setInterval(fetchMessages, 5000)
+    return () => clearInterval(interval)
+  }, [id, user])
+
+  useEffect(() => {
+    if (scrollRef.current) {
+        scrollRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
+
+  const fetchData = async () => {
+    try {
+        setLoading(true)
+        await Promise.all([fetchListing(), fetchMessages()])
+    } catch (err) {
+        console.error(err)
+        showError('Error', 'Failed to load chat')
+    } finally {
+        setLoading(false)
+    }
+  }
+
+  const fetchListing = async () => {
+      // @ts-ignore
+      const data = await supabase.marketplace.get(id)
+      setListing(data)
+  }
+
+  const fetchMessages = async () => {
+      if (!id) return
+      // @ts-ignore
+      const data = await supabase.marketplace.getMessages(id)
+      if (Array.isArray(data)) {
+          setMessages(data)
+      }
+  }
+
+  const handleSend = async () => {
+    if (!input.trim() || sending) return
+    
+    try {
+        setSending(true)
+        // @ts-ignore
+        await supabase.marketplace.sendMessage(id, input)
+        setInput('')
+        await fetchMessages()
+    } catch (err: any) {
+        showError('Failed to send', err.message)
+    } finally {
+        setSending(false)
+    }
+  }
+
+  const formatTime = (iso: string) => {
+      return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+
+  if (loading && !listing) {
+      return <Layout requireAuth><div className="p-5 text-center"><div className="spinner-border"/></div></Layout>
+  }
 
   return (
     <Layout requireAuth>
-      <div className="container-fluid" style={{ maxWidth: 900 }}>
+      <div className="container-fluid h-100 d-flex flex-column" style={{ maxWidth: 900, minHeight: 'calc(100vh - 100px)' }}>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
         {/* Top bar */}
         <div className="d-flex align-items-center justify-content-between py-3 border-bottom" style={{ borderColor: 'var(--border-color)' }}>
           <div className="d-flex align-items-center gap-3">
@@ -30,12 +104,14 @@ export default function MarketplaceThread() {
               <ArrowLeft size={22} style={{ color: 'var(--text-primary)' }} />
             </button>
             <div className="position-relative" style={{ width: 40, height: 40 }}>
-              <div className="rounded-circle" style={{ width: 40, height: 40, backgroundSize: 'cover', backgroundPosition: 'center', backgroundImage: 'url(https://lh3.googleusercontent.com/aida-public/AB6AXuAOjBsaIvOI3rCPYOi4znJd8fWuq0dVlpIySS0STRTbiy0NJgypMSvbtk3AfU66oaR2I-5lfU1y7NuMxevWc6bpluU7oBPOkJWv4YYqsc1HIlEEgHTw30xeE1uR_Vd-it7JV0Z3UyoiwY_1oQoddFTqvp14R49icXPBNg0ofptbZgXVaCT12ZG2kdk40Cp_3rGkhml99Tq9pJrcdnM4mQbuGv4fwQmSPx12RN2k-mVD-PrgfrR3Hf39t7yrNZYfO9Hid-kxC4-dbtgi)' }} />
+              <div className="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style={{ width: 40, height: 40 }}>
+                 {listing?.seller_name?.[0] || 'U'}
+              </div>
               <span className="position-absolute" style={{ bottom: -2, right: -2, width: 12, height: 12, borderRadius: 6, backgroundColor: 'var(--success-500)', border: '2px solid var(--bg-primary)' }} />
             </div>
             <div>
-              <div style={{ color: 'var(--text-primary)', fontWeight: 700 }}>John Doe</div>
-              <div style={{ color: 'var(--success-500)', fontSize: 12 }}>Online</div>
+              <div style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{listing?.seller_name || 'Seller'}</div>
+              <div style={{ color: 'var(--success-500)', fontSize: 12 }}>{listing?.seller_verified === 'verified' ? 'Verified' : 'Online'}</div>
             </div>
           </div>
           <button className="btn btn-link text-decoration-none" aria-label="More">
@@ -44,57 +120,76 @@ export default function MarketplaceThread() {
         </div>
 
         {/* Context banner */}
-        <div className="d-flex align-items-center gap-3 py-3 border-bottom" style={{ borderColor: 'var(--border-color)' }}>
-          <div className="rounded-3" style={{ width: 48, height: 48, backgroundSize: 'cover', backgroundPosition: 'center', backgroundImage: 'url(https://lh3.googleusercontent.com/aida-public/AB6AXuCMoez0ZInMNzkVBDx42Hzd9AU1az2I2eZvd9opyJei4OASfd23x9UCyVV-tWaN8y-SkBBWUFpBa2IshLMG5LrUKM2SAHL6C0iVZ8E7IyAl5rgPRqwrsXNNUS8eJS1N2XmcVw8aw7lxM9fVQZB22hrxwEdG8ismiboO5vzI2Qw6gY9U6Jz5HSslVkGXru6av1BXRWOnzuodyXn6MWEDEBN6TqDDBDOdQCv2fqXj7ccr6zwOdhzowURydeAmYxG_yKeN4DmvPbqEeLZw)' }} />
+        {listing && (
+        <div className="d-flex align-items-center gap-3 py-3 border-bottom cursor-pointer" onClick={() => navigate(`/marketplace/listing/${id}`)} style={{ borderColor: 'var(--border-color)' }}>
+          <img 
+            src={(Array.isArray(listing.images) && listing.images.length > 0) ? listing.images[0] : 'https://via.placeholder.com/50'} 
+            onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/50')}
+            className="rounded-3" 
+            style={{ width: 48, height: 48, objectFit: 'cover' }} 
+            alt="Product"
+          />
           <div className="flex-grow-1">
-            <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>iPhone 13 Pro - 256GB</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>$800</div>
+            <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{listing.title}</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{listing.currency} {listing.price?.toLocaleString()}</div>
           </div>
           <ChevronRight size={20} style={{ color: 'var(--text-secondary)' }} />
         </div>
+        )}
 
         {/* Chat window */}
-        <div className="py-3">
-          <div className="text-center" style={{ color: 'var(--text-secondary)', fontSize: 13 }}>--- Today ---</div>
-          {messages.map(m => (
-            <div key={m.id} className={`d-flex ${m.type === 'outgoing' ? 'justify-content-end' : ''} align-items-end gap-2 px-2 pt-2`}>
-              {m.type === 'incoming' && (
-                <div className="rounded-circle" style={{ width: 32, height: 32, backgroundSize: 'cover', backgroundPosition: 'center', backgroundImage: 'url(https://lh3.googleusercontent.com/aida-public/AB6AXuABMOvzQcQ42rbSsP-BbGfOVCzKsyM3Bl-TqP2yUAofJpD4T55chbUtVe8o7wNsDEv5q58dcDZWPKjai3RXfdEeE-L2KKUSNhaefHqXo7Zg4iCdPzsMGCKycc4Obo-VkiPI6yuF0GUrZQGSs4KxggXYtVfjaD3woj13Mv5sl49NF6t1L0tUVph9kr7tQPD4vkrl2PMGkDlQzPRVQFJzBLxBciNivds0X7x1v3SYGLQP0_9kph6fG7nPYnR-ZYiXX65KTxf7BlESMRMt)' }} />
-              )}
-              <div className="d-flex flex-column" style={{ maxWidth: '80%' }}>
-                <div className={`px-3 py-2 rounded-3 ${m.type === 'outgoing' ? 'text-white' : ''}`}
-                  style={{ background: m.type === 'outgoing' ? 'var(--primary-600)' : 'var(--gray-200)', color: m.type === 'outgoing' ? '#fff' : 'var(--text-primary)' }}>
-                  {m.text}
-                </div>
-                <div className={`d-flex ${m.type === 'outgoing' ? 'justify-content-end' : ''} align-items-center gap-1`}>
-                  <small style={{ color: 'var(--text-secondary)' }}>{m.time}</small>
-                  {m.type === 'outgoing' && <CheckCheck size={14} style={{ color: 'var(--primary-600)' }} />}
-                </div>
+        <div className="flex-grow-1 py-3 overflow-auto" style={{ maxHeight: '60vh' }}>
+          {messages.length === 0 ? (
+              <div className="text-center text-secondary mt-5">
+                  <p>Start a conversation with the seller about this item.</p>
               </div>
+          ) : (
+            <div className="d-flex flex-column gap-3">
+             {messages.map(m => {
+                const isMe = m.sender_id === user?.id
+                return (
+                    <div key={m.id} className={`d-flex ${isMe ? 'justify-content-end' : ''} align-items-end gap-2 px-2`}>
+                    {!isMe && (
+                        <div className="rounded-circle bg-light d-flex align-items-center justify-content-center" style={{ width: 32, height: 32, fontSize: 12 }}>
+                            {listing?.seller_name?.[0] || 'S'}
+                        </div>
+                    )}
+                    <div className="d-flex flex-column" style={{ maxWidth: '80%' }}>
+                        <div className={`px-3 py-2 rounded-3 ${isMe ? 'text-white' : ''}`}
+                        style={{ background: isMe ? 'var(--primary-600)' : 'var(--gray-200)', color: isMe ? '#fff' : 'var(--text-primary)' }}>
+                        {m.content}
+                        </div>
+                        <div className={`d-flex ${isMe ? 'justify-content-end' : ''} align-items-center gap-1 mt-1`}>
+                        <small style={{ color: 'var(--text-secondary)', fontSize: 10 }}>{formatTime(m.created_at)}</small>
+                        {isMe && <CheckCheck size={14} style={{ color: 'var(--primary-600)' }} />}
+                        </div>
+                    </div>
+                    </div>
+                )
+             })}
+             <div ref={scrollRef} />
             </div>
-          ))}
-
-          {/* Offer card */}
-          <div className="d-flex justify-content-end px-2 pt-2">
-            <div className="rounded-3 p-3" style={{ maxWidth: '80%', border: '1px solid rgba(245, 158, 11, 0.3)', background: 'rgba(245, 158, 11, 0.1)' }}>
-              <div style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: 14 }}>You sent an offer</div>
-              <div style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 22 }}>$780.00</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Offer expires in 24 hours.</div>
-              <div className="mt-2 d-flex gap-2">
-                <button className="btn btn-secondary btn-sm">Withdraw Offer</button>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Footer input */}
-        <div className="d-flex align-items-center gap-2 border-top py-3" style={{ borderColor: 'var(--border-color)', position: 'sticky', bottom: 0, background: 'var(--bg-primary)' }}>
-          <button className="btn btn-light rounded-circle d-flex align-items-center justify-content-center" style={{ width: 40, height: 40 }} aria-label="Add">
-            <Plus size={20} />
-          </button>
-          <input type="text" className="form-control rounded-pill" placeholder="Type a message..." />
-          <button className="btn btn-gradient-primary d-flex align-items-center gap-2">
-            <Send size={18} /> Send
+        <div className="d-flex align-items-center gap-2 border-top py-3 mt-auto" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-primary)' }}>
+          <input 
+            type="text" 
+            className="form-control rounded-pill" 
+            placeholder="Type a message..." 
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            disabled={sending}
+          />
+          <button 
+            className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center p-2" 
+            style={{ width: 40, height: 40 }}
+            onClick={handleSend}
+            disabled={sending || !input.trim()}
+          >
+            <Send size={18} />
           </button>
         </div>
       </div>

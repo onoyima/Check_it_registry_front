@@ -296,7 +296,7 @@ export default function ReportDetails() {
                                     <span className="text-secondary">{rc.date}</span>
                                   </div>
                                   <div className="mt-1 fw-medium" style={{ fontSize: 12 }}>{rc.text}</div>
-                                  {rc.by && <div className="text-secondary" style={{ fontSize: 11 }}>By {rc.by}</div>}
+                                  {'by' in rc && <div className="text-secondary" style={{ fontSize: 11 }}>By {rc.by}</div>}
                                 </div>
                               </Link>
                             </div>
