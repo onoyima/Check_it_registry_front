@@ -23,10 +23,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
 
   useEffect(() => {
-    // Initialize theme from localStorage or system preference
+    // Initialize theme from localStorage or strictly default to light
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light')
+    const initialTheme = savedTheme || 'light'
     
     setTheme(initialTheme)
     applyTheme(initialTheme)
@@ -34,6 +33,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const applyTheme = (newTheme: 'light' | 'dark') => {
     document.documentElement.setAttribute('data-theme', newTheme)
+    document.documentElement.setAttribute('data-bs-theme', newTheme)
     localStorage.setItem('theme', newTheme)
   }
 

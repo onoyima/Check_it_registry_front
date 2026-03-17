@@ -186,7 +186,7 @@ export default function LandingPage() {
   return (
     <div className="landing-page overflow-x-hidden" style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
       {/* Background Elements */}
-      <div className="position-absolute top-0 start-0 w-100 h-100 bg-light" style={{ zIndex: 0 }}></div>
+      <div className="position-absolute top-0 start-0 w-100 h-100 bg-body-tertiary" style={{ zIndex: 0 }}></div>
 
       <div style={{ position: 'relative', zIndex: 10 }}>
         <Navbar user={user} onLogout={logout} />
@@ -224,7 +224,7 @@ export default function LandingPage() {
                       </Link>
                       <button onClick={() => {
                           document.getElementById('demo-section')?.scrollIntoView({ behavior: 'smooth' });
-                      }} className="btn btn-outline-secondary bg-white btn-lg px-5 py-3 rounded-pill fw-bold d-flex align-items-center justify-content-center hover-scale shadow-sm">
+                      }} className="btn btn-outline-secondary bg-body btn-lg px-5 py-3 rounded-pill fw-bold d-flex align-items-center justify-content-center hover-scale shadow-sm">
                         See How It Works
                       </button>
                     </>
@@ -249,7 +249,7 @@ export default function LandingPage() {
                  <motion.div 
                     animate={{ y: [0, -20, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                    className="position-absolute top-0 end-0 bg-white border border-light p-3 rounded-4 shadow-sm"
+                    className="position-absolute top-0 end-0 bg-body border border-light p-3 rounded-4 shadow-sm"
                     style={{ zIndex: 3, top: '10%', right: '10%' }}
                  >
                     <div className="d-flex align-items-center gap-3">
@@ -266,7 +266,7 @@ export default function LandingPage() {
                  <motion.div 
                     animate={{ y: [0, 20, 0] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="position-absolute bg-white border border-light p-3 rounded-4 shadow-sm"
+                    className="position-absolute bg-body border border-light p-3 rounded-4 shadow-sm"
                     style={{ zIndex: 2, bottom: '20%', left: '0%' }}
                  >
                     <div className="d-flex align-items-center gap-3">
@@ -297,28 +297,28 @@ export default function LandingPage() {
                         <div className="d-flex justify-content-between px-4 py-2 text-white small">
                              <span>9:41</span>
                              <div className="d-flex gap-1">
-                                 <div className="bg-white rounded-circle" style={{width: 6, height: 6}}></div>
-                                 <div className="bg-white rounded-circle" style={{width: 6, height: 6}}></div>
-                                 <div className="bg-white rounded-pill" style={{width: 16, height: 6}}></div>
+                                 <div className="bg-body rounded-circle" style={{width: 6, height: 6}}></div>
+                                 <div className="bg-body rounded-circle" style={{width: 6, height: 6}}></div>
+                                 <div className="bg-body rounded-pill" style={{width: 16, height: 6}}></div>
                              </div>
                         </div>
                         
                         {/* App UI Simulation */}
-                        <div className="bg-light h-100 rounded-top-4 pt-4 px-3" style={{background: 'var(--bg-secondary)'}}>
+                        <div className="bg-body-tertiary h-100 rounded-top-4 pt-4 px-3" style={{background: 'var(--bg-secondary)'}}>
                              <div className="d-flex justify-content-between align-items-center mb-4">
-                                 <div className="fw-bold fs-5 text-dark">My Devices</div>
+                                 <div className="fw-bold fs-5 text-body-emphasis">My Devices</div>
                                  <div className="bg-primary rounded-circle p-1">
                                      <Users size={16} className="text-white" />
                                  </div>
                              </div>
                              
-                             <div className="bg-white p-3 rounded-3 shadow-sm mb-3">
+                             <div className="bg-body p-3 rounded-3 shadow-sm mb-3">
                                  <div className="d-flex gap-3">
                                      <div className="bg-secondary bg-opacity-10 rounded p-2 d-flex align-items-center justify-content-center" style={{width: 50, height: 50}}>
-                                         <Smartphone size={24} className="text-dark" />
+                                         <Smartphone size={24} className="text-body-emphasis" />
                                      </div>
                                      <div>
-                                         <div className="fw-bold text-dark">iPhone 14 Pro</div>
+                                         <div className="fw-bold text-body-emphasis">iPhone 14 Pro</div>
                                          <div className="text-success small d-flex align-items-center gap-1">
                                              <CheckCircle size={10} /> Protected
                                          </div>
@@ -326,13 +326,13 @@ export default function LandingPage() {
                                  </div>
                              </div>
 
-                             <div className="bg-white p-3 rounded-3 shadow-sm mb-3 opacity-75">
+                             <div className="bg-body p-3 rounded-3 shadow-sm mb-3 opacity-75">
                                  <div className="d-flex gap-3">
                                      <div className="bg-secondary bg-opacity-10 rounded p-2 d-flex align-items-center justify-content-center" style={{width: 50, height: 50}}>
-                                         <Smartphone size={24} className="text-dark" />
+                                         <Smartphone size={24} className="text-body-emphasis" />
                                      </div>
                                      <div>
-                                         <div className="fw-bold text-dark">MacBook Air</div>
+                                         <div className="fw-bold text-body-emphasis">MacBook Air</div>
                                          <div className="text-success small d-flex align-items-center gap-1">
                                              <CheckCircle size={10} /> Protected
                                          </div>
@@ -360,7 +360,7 @@ export default function LandingPage() {
       </section>
 
       {/* Live Stats Ticker */}
-      <section className="py-4 border-top border-bottom bg-white" style={{borderColor: 'var(--border-color)'}}>
+      <section className="py-4 border-top border-bottom bg-body" style={{borderColor: 'var(--border-color)'}}>
           <div className="container">
               <div className="row text-center divide-x">
                   <div className="col-3">
@@ -368,7 +368,7 @@ export default function LandingPage() {
                       <div className="text-muted small text-uppercase fw-bold tracking-wider">Users</div>
                   </div>
                   <div className="col-3 border-start">
-                      <div className="fw-bold fs-3 text-dark">{stats.devices.toLocaleString()}</div>
+                      <div className="fw-bold fs-3 text-body-emphasis">{stats.devices.toLocaleString()}</div>
                       <div className="text-muted small text-uppercase fw-bold tracking-wider">Devices</div>
                   </div>
                   <div className="col-3 border-start">
@@ -387,7 +387,7 @@ export default function LandingPage() {
        <section id="demo-section" className="py-5 bg-gradient-to-b from-transparent to-gray-50">
            <div className="container py-5">
                <div className="text-center mb-5">
-                   <h2 className="display-6 fw-bold mb-3 text-dark">Security Made Simple</h2>
+                   <h2 className="display-6 fw-bold mb-3 text-body-emphasis">Security Made Simple</h2>
                    <p className="text-muted mx-auto fs-5" style={{maxWidth: '650px'}}>We've removed all the technical jargon. Protecting your belongings is now as easy as taking a photo.</p>
                </div>
                
@@ -397,7 +397,7 @@ export default function LandingPage() {
                            {features.map((feature, idx) => (
                                <motion.div 
                                     key={idx}
-                                    className={`p-4 rounded-4 cursor-pointer transition-all ${activeFeature === idx ? 'bg-white shadow-lg border-primary' : 'bg-transparent border-transparent'}`}
+                                    className={`p-4 rounded-4 cursor-pointer transition-all ${activeFeature === idx ? 'bg-body shadow-lg border-primary' : 'bg-transparent border-transparent'}`}
                                     style={{ border: activeFeature === idx ? '1px solid var(--primary-200)' : '1px solid transparent' }}
                                     onClick={() => setActiveFeature(idx)}
                                     whileHover={{ scale: 1.02 }}
@@ -407,7 +407,7 @@ export default function LandingPage() {
                                            {feature.icon}
                                        </div>
                                        <div>
-                                           <h4 className={`fw-bold mb-2 ${activeFeature === idx ? 'text-dark' : 'text-muted'}`}>{feature.title}</h4>
+                                           <h4 className={`fw-bold mb-2 ${activeFeature === idx ? 'text-body-emphasis' : 'text-muted'}`}>{feature.title}</h4>
                                            <p className="mb-0 text-muted">{feature.desc}</p>
                                        </div>
                                    </div>
@@ -442,7 +442,7 @@ export default function LandingPage() {
                                     {activeFeature === 1 && (
                                         <div className="w-100 h-100 position-relative p-5 d-flex flex-column align-items-center justify-content-center">
                                             <img src="https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=800&q=80" alt="Verification" className="position-absolute top-0 start-0 w-100 h-100 object-fit-cover opacity-25" />
-                                            <div className="position-absolute top-0 start-0 w-100 h-100 bg-white opacity-75"></div>
+                                            <div className="position-absolute top-0 start-0 w-100 h-100 bg-body opacity-75"></div>
                                             
                                             <div className="card w-100 shadow-lg border-0 mb-3 z-1 rounded-4" style={{ maxWidth: '400px' }}>
                                                 <div className="card-body p-4 d-flex align-items-center gap-3">
@@ -450,7 +450,7 @@ export default function LandingPage() {
                                                         <CheckCircle size={32} />
                                                     </div>
                                                     <div>
-                                                        <h5 className="mb-1 fw-bold text-dark">Verified Owner</h5>
+                                                        <h5 className="mb-1 fw-bold text-body-emphasis">Verified Owner</h5>
                                                         <p className="mb-0 text-muted small">Buy and sell with confidence. We verify devices so you know they aren't stolen.</p>
                                                     </div>
                                                 </div>
@@ -460,15 +460,15 @@ export default function LandingPage() {
                                     {activeFeature === 2 && (
                                         <div className="w-100 h-100 position-relative overflow-hidden p-5 d-flex align-items-center justify-content-center">
                                             <img src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80" alt="Happy confident people" className="position-absolute top-0 start-0 w-100 h-100 object-fit-cover opacity-50" />
-                                            <div className="position-absolute top-0 start-0 w-100 h-100 bg-light opacity-75"></div>
+                                            <div className="position-absolute top-0 start-0 w-100 h-100 bg-body-tertiary opacity-75"></div>
                                             
-                                            <div className="z-1 bg-white p-4 rounded-4 shadow-lg text-center" style={{ maxWidth: '400px' }}>
+                                            <div className="z-1 bg-body p-4 rounded-4 shadow-lg text-center" style={{ maxWidth: '400px' }}>
                                                 <div className="d-flex justify-content-center mb-3">
                                                     <div className="bg-danger bg-opacity-10 text-danger p-3 rounded-circle d-flex align-items-center">
                                                         <AlertTriangle size={32} />
                                                     </div>
                                                 </div>
-                                                <h4 className="fw-bold text-dark mb-2">Flag as Missing</h4>
+                                                <h4 className="fw-bold text-body-emphasis mb-2">Flag as Missing</h4>
                                                 <p className="text-muted small mb-0 lh-base">
                                                     If your device goes missing, one tap notifies the police and the national registry. We'll alert you the moment it's found.
                                                 </p>
@@ -486,7 +486,7 @@ export default function LandingPage() {
 {/**/}
 
        {/* Team Section */}
-       <section className="py-5 bg-white position-relative">
+       <section className="py-5 bg-body position-relative">
           <div className="container py-5">
               <div className="text-center mb-5">
                   <h2 className="display-6 fw-bold mb-3" style={{ color: 'var(--text-primary)' }}>Real People, Real Protection</h2>
@@ -541,7 +541,7 @@ export default function LandingPage() {
                                       </div>
                                   </div>
                               </div>
-                              <div className="card-body p-4 bg-light">
+                              <div className="card-body p-4 bg-body-tertiary">
                                   <h4 className="fw-bold mb-1" style={{ color: 'var(--text-primary)' }}>{member.name}</h4>
                                   <div className="text-primary fw-medium mb-3 text-uppercase small tracking-wide">{member.role}</div>
                                   <p className="text-muted small mb-0 line-clamp-2">
@@ -604,7 +604,7 @@ export default function LandingPage() {
                            transition={{ delay: idx * 0.1 }}
                            className="col-md-4"
                        >
-                           <div className="card h-100 border-0 shadow-sm p-4 rounded-4 bg-white position-relative">
+                           <div className="card h-100 border-0 shadow-sm p-4 rounded-4 bg-body position-relative">
                                <div className="position-absolute top-0 start-0 translate-middle p-3 rounded-circle bg-primary text-white" style={{marginLeft: '40px', marginTop: '0px'}}>
                                    <Shield size={20} fill="currentColor" />
                                </div>
@@ -612,11 +612,11 @@ export default function LandingPage() {
                                    <div className="mb-4 text-warning">
                                        {[1,2,3,4,5].map(i => <span key={i}>★</span>)}
                                    </div>
-                                   <p className="text-dark fst-italic mb-4" style={{ minHeight: '80px' }}>"{testimonial.content || testimonial.quote}"</p>
+                                   <p className="text-body-emphasis fst-italic mb-4" style={{ minHeight: '80px' }}>"{testimonial.content || testimonial.quote}"</p>
                                    <div className="d-flex align-items-center gap-3 border-top pt-3">
                                        <img src={testimonial.image || `https://ui-avatars.com/api/?name=${testimonial.name}&background=random`} alt={testimonial.name} className="rounded-circle object-fit-cover shadow-sm" style={{width: 50, height: 50}} />
                                        <div>
-                                           <h6 className="fw-bold mb-0 text-dark">{testimonial.name}</h6>
+                                           <h6 className="fw-bold mb-0 text-body-emphasis">{testimonial.name}</h6>
                                            <small className="text-muted">{testimonial.role} {testimonial.location ? `• ${testimonial.location}` : ''}</small>
                                        </div>
                                    </div>
@@ -701,7 +701,7 @@ export default function LandingPage() {
                     <label className="form-label text-muted small fw-bold">IMEI Number</label>
                     <input 
                         type="text" 
-                        className="form-control form-control-lg bg-light border-0" 
+                        className="form-control form-control-lg bg-body-tertiary border-0" 
                         placeholder="e.g. 3546..." 
                         value={searchImei}
                         onChange={(e) => setSearchImei(e.target.value.replace(/\D/g, '').slice(0, 16))}
@@ -711,7 +711,7 @@ export default function LandingPage() {
                     <label className="form-label text-muted small fw-bold">Serial Number</label>
                     <input 
                         type="text" 
-                        className="form-control form-control-lg bg-light border-0" 
+                        className="form-control form-control-lg bg-body-tertiary border-0" 
                         placeholder="e.g. SN123..." 
                         value={searchSerial}
                         onChange={(e) => setSearchSerial(e.target.value)}
@@ -782,13 +782,13 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-5 border-top bg-light" style={{ borderColor: 'var(--border-color)' }}>
+      <footer className="py-5 border-top bg-body-tertiary" style={{ borderColor: 'var(--border-color)' }}>
         <div className="container px-4">
             <div className="row g-4">
                 <div className="col-md-4 text-center text-md-start">
                     <div className="d-flex align-items-center gap-2 justify-content-center justify-content-md-start mb-3">
                         <img src="/logo1.png" alt="Check It Logo" style={{ height: '32px', objectFit: 'contain' }} />
-                        <h5 className="fw-bold fs-4 mb-0 text-dark">Check It</h5>
+                        <h5 className="fw-bold fs-4 mb-0 text-body-emphasis">Check It</h5>
                     </div>
                     <p className="text-muted">
                         Empowering ownership, preventing theft, and enabling recovery through technology.
@@ -799,7 +799,7 @@ export default function LandingPage() {
                     </div>
                 </div>
                 <div className="col-md-2 col-6">
-                    <h6 className="fw-bold mb-3 text-dark">Platform</h6>
+                    <h6 className="fw-bold mb-3 text-body-emphasis">Platform</h6>
                     <ul className="list-unstyled d-flex flex-column gap-2 text-muted small">
                         <li><Link to="/search" className="text-decoration-none text-muted hover-text-primary">Public Search</Link></li>
                         <li><Link to="/marketplace/browse" className="text-decoration-none text-muted hover-text-primary">Marketplace</Link></li>
@@ -807,7 +807,7 @@ export default function LandingPage() {
                     </ul>
                 </div>
                 <div className="col-md-2 col-6">
-                    <h6 className="fw-bold mb-3 text-dark">Company</h6>
+                    <h6 className="fw-bold mb-3 text-body-emphasis">Company</h6>
                     <ul className="list-unstyled d-flex flex-column gap-2 text-muted small">
                         <li><Link to="/about" className="text-decoration-none text-muted hover-text-primary">About Us</Link></li>
                         <li><Link to="/contact" className="text-decoration-none text-muted hover-text-primary">Contact</Link></li>
@@ -815,7 +815,7 @@ export default function LandingPage() {
                     </ul>
                 </div>
                  <div className="col-md-4">
-                     <h6 className="fw-bold mb-3 text-dark">Stay Updated</h6>
+                     <h6 className="fw-bold mb-3 text-body-emphasis">Stay Updated</h6>
                      <div className="input-group mb-3">
                          <input type="text" className="form-control" placeholder="Enter your email" aria-label="Email" />
                          <button className="btn btn-primary" type="button">Subscribe</button>

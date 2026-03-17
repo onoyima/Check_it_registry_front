@@ -102,7 +102,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
           {/* Central Logo & Links for Guests */}
           {!user && (
             <div className="d-none d-lg-flex position-absolute start-50 top-50 translate-middle align-items-center gap-4" style={{ zIndex: 1045 }}>
-              <Link to="/" className="d-flex align-items-center gap-2 text-decoration-none text-dark pe-4 border-end">
+              <Link to="/" className="d-flex align-items-center gap-2 text-decoration-none text-body-emphasis pe-4 border-end" style={{ borderColor: 'var(--border-color)' }}>
                 <img src="/logo1.png" alt="Check It Logo" style={{ height: '28px', objectFit: 'contain' }} />
                 <span className="fw-bold fs-5">Check It</span>
               </Link>
