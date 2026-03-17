@@ -25,7 +25,7 @@ export default function PasswordReset() {
     try {
       setRequesting(true)
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/request-password-reset`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || '/api')}/auth/request-password-reset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,7 +72,7 @@ export default function PasswordReset() {
     try {
       setResetting(true)
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/reset-password`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || '/api')}/auth/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

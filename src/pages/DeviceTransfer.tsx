@@ -29,7 +29,7 @@ interface TransferRequest {
 
 export default function DeviceTransfer() {
   // Unified API base for direct calls where needed
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+  const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || '/api')
   const [devices, setDevices] = useState<any[]>([])
   const [transferRequests, setTransferRequests] = useState<TransferRequest[]>([])
   const [sentTransfers, setSentTransfers] = useState<any[]>([])

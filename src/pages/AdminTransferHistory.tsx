@@ -45,7 +45,7 @@ export default function AdminTransferHistory() {
       if (selectedCategory !== 'all') params.append('category', selectedCategory)
 
       // Use unified API base URL (env or default 3001)
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || '/api')
       const res = await fetch(`${API_URL}/device-transfer/history?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       })

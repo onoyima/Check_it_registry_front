@@ -28,7 +28,7 @@ export default function LEATransferHistory() {
       params.append('limit', '50')
       if (status !== 'all') params.append('status', status)
 
-      const res = await fetch(`http://localhost:3006/api/device-transfer/history?${params.toString()}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/device-transfer/history?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const json = await res.json()

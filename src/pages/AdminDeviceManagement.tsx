@@ -242,7 +242,7 @@ export default function AdminDeviceManagement() {
       const token = localStorage.getItem('auth_token')
       if (!token) throw new Error('No authentication token found')
 
-      const res = await fetch(`http://localhost:3006/api/admin-portal/verify-device/${deviceId}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/admin-portal/verify-device/${deviceId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -100,7 +100,7 @@ export default function AuditTrail() {
       if (statusFilter !== 'all') params.append('status', statusFilter)
 
       // Choose endpoint based on role
-      const base = 'http://localhost:3006/api/audit-trail'
+      const base = `${import.meta.env.VITE_API_BASE_URL || ''}/api/audit-trail`
       const logsPath = user?.role === 'admin' ? '/logs' : user?.role === 'lea' ? '/lea/logs' : '/my/logs'
 
       // Fetch logs

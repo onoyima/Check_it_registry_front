@@ -1,6 +1,6 @@
 // API Client for MySQL Backend
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:3006/api";
+  import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || '/api');
 
 interface User {
   id: string;

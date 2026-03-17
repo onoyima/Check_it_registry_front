@@ -60,7 +60,7 @@ export default function Search() {
       if (pImei) params.set('imei', pImei)
       if (!pImei && pSerial) params.set('serial', pSerial)
 
-      const res = await fetch(`http://localhost:3006/api/public-check?${params.toString()}`)
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/public-check?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to check device')
       const json: PublicCheckResult = await res.json()
       setResult(json)

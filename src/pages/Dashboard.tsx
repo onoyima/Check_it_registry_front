@@ -63,10 +63,10 @@ export default function Dashboard() {
       }
 
       const [devicesRes, reportsRes] = await Promise.all([
-        fetch('http://localhost:3006/api/device-management', {
+        fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/device-management', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch('http://localhost:3006/api/report-management', {
+        fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/report-management', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ])
