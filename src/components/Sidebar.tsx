@@ -50,11 +50,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
   const { theme } = useTheme();
   const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
 
-  // Debug logging
-  React.useEffect(() => {
-    console.log("Sidebar isOpen:", isOpen, "isMobile:", isMobile);
-  }, [isOpen, isMobile]);
-
   // Handle window resize
   React.useEffect(() => {
     const handleResize = () => {

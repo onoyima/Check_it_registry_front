@@ -18,11 +18,6 @@ export function Layout({ children, requireAuth = false, allowedRoles }: LayoutPr
   const location = useLocation()
   const { showSuccess, showError } = useToast()
 
-  // Debug logging for sidebar state
-  useEffect(() => {
-    console.log('Layout: sidebarOpen changed to:', sidebarOpen);
-  }, [sidebarOpen])
-
   // Close sidebar on mobile when route changes
   useEffect(() => {
     if (window.innerWidth < 768) {
@@ -74,9 +69,7 @@ export function Layout({ children, requireAuth = false, allowedRoles }: LayoutPr
           user={user} 
           onLogout={handleLogout}
           onMenuClick={() => {
-            console.log('Layout: onMenuClick called, current sidebarOpen:', sidebarOpen);
             setSidebarOpen(!sidebarOpen);
-            console.log('Layout: setSidebarOpen called with:', !sidebarOpen);
           }}
           sidebarOpen={sidebarOpen}
         />

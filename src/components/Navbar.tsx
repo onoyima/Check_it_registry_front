@@ -83,7 +83,6 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
             {user && (
               <button
                 onClick={() => {
-                  console.log('Menu button clicked, current sidebarOpen:', sidebarOpen);
                   onMenuClick?.();
                 }}
                 className="btn btn-link p-2 text-decoration-none"
