@@ -188,7 +188,7 @@ export default function LandingPage() {
       {/* Background Elements */}
       <div className="position-absolute top-0 start-0 w-100 h-100 bg-body-tertiary" style={{ zIndex: 0 }}></div>
 
-      <div style={{ position: 'relative', zIndex: 10 }}>
+      <div style={{ position: 'relative', zIndex: 1050 }}>
         <Navbar user={user} onLogout={logout} />
       </div>
       
