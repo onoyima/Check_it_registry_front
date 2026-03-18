@@ -338,17 +338,19 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Desktop: always visible, no animation */
+/* Desktop: allow animation and open/closed states */
 @media (min-width: 768px) {
   .sidebar {
-    transform: translateX(0) !important;
-    transition: none !important;
+    transition: transform 0.3s ease-in-out !important;
     width: 280px;
   }
   
-  .sidebar.sidebar-open,
-  .sidebar.sidebar-closed {
+  .sidebar.sidebar-open {
     transform: translateX(0) !important;
+  }
+
+  .sidebar.sidebar-closed {
+    transform: translateX(-100%) !important;
   }
 }
 

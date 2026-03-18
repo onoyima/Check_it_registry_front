@@ -71,6 +71,7 @@ import './App.css'
 import { ToastProvider } from './components/Toast'
 import NotFound from './pages/NotFound'
 import AdminMarketplaceManagement from './pages/AdminMarketplaceManagement'
+import CustomCursor from './components/CustomCursor'
 
 interface AppProps {}
 
@@ -176,6 +177,7 @@ function App({}: AppProps = {}) {
     <ThemeProvider>
       <AuthProvider>
         <ToastProvider>
+          <CustomCursor />
           <AppRoutes />
         </ToastProvider>
       </AuthProvider>
