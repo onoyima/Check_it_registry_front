@@ -78,7 +78,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
       <div className="container-fluid px-2 px-sm-3 px-md-4">
         <div className="d-flex justify-content-between align-items-center w-100" style={{ minHeight: '60px', height: '60px' }}>
           {/* Left side */}
-          <div className="d-flex align-items-center">
+          <div className="d-flex align-items-center" style={{ flex: 1 }}>
             {/* Mobile menu button - temporarily visible on all screens for testing */}
             {user && (
               <button
@@ -101,7 +101,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
 
           {/* Central Logo & Links for Guests */}
           {!user && (
-            <div className="d-none d-lg-flex position-absolute start-50 top-50 translate-middle align-items-center gap-4" style={{ zIndex: 1045 }}>
+            <div className="d-none d-lg-flex justify-content-center align-items-center gap-4" style={{ flex: 2 }}>
               <Link to="/" className="d-flex align-items-center gap-2 text-decoration-none text-body-emphasis pe-4 border-end" style={{ borderColor: 'var(--border-color)' }}>
                 <img src="/logo1.png" alt="Check It Logo" style={{ height: '28px', objectFit: 'contain' }} />
                 <span className="fw-bold fs-5">Check It</span>
@@ -115,7 +115,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
           )}
 
           {/* Right side */}
-          <div className="d-flex align-items-center gap-3 position-relative" style={{ zIndex: 1050 }}>
+          <div className="d-flex align-items-center justify-content-end gap-3 position-relative" style={{ zIndex: 1050, flex: 1 }}>
             {/* Dark mode toggle */}
             <button
               onClick={toggleTheme}
