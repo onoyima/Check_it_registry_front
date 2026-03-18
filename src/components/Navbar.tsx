@@ -115,7 +115,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
           )}
 
           {/* Right side */}
-          <div className="d-flex align-items-center gap-3">
+          <div className="d-flex align-items-center gap-3 position-relative" style={{ zIndex: 1050 }}>
             {/* Dark mode toggle */}
             <button
               onClick={toggleTheme}
