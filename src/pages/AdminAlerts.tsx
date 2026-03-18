@@ -59,8 +59,8 @@ export default function AdminAlerts() {
       const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {}
 
       const [reportedRes, alertsRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/admin-portal/reported-devices?page=1&limit=50', { headers }),
-        fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/admin-portal/alerts/device-checks?limit=50', { headers })
+        fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/admin-portal/reported-devices?page=1&limit=50`, { headers }),
+        fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/admin-portal/alerts/device-checks?limit=50`, { headers })
       ])
       if (!reportedRes.ok) throw new Error('Failed to load reported devices')
       if (!alertsRes.ok) throw new Error('Failed to load alerts')

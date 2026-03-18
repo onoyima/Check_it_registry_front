@@ -152,7 +152,7 @@ const DeviceCheckModal: React.FC<DeviceCheckModalProps> = ({
       }
 
       // Perform enhanced device check
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/public-check/enhanced', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/public-check/enhanced`, {
         method: 'POST',
         headers,
         body: JSON.stringify(checkData)
