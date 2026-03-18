@@ -13,7 +13,7 @@ interface LayoutProps {
 
 export function Layout({ children, requireAuth = false, allowedRoles }: LayoutProps) {
   const { user, logout } = useAuth()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768)
   const navigate = useNavigate()
   const location = useLocation()
   const { showSuccess, showError } = useToast()
@@ -69,7 +69,7 @@ export function Layout({ children, requireAuth = false, allowedRoles }: LayoutPr
       )}
       
       {/* Main Content */}
-      <div className={`main-content ${user ? 'main-content-with-sidebar' : ''}`}>
+      <div className={`main-content ${user && sidebarOpen ? 'main-content-with-sidebar' : ''}`}>
         <Navbar 
           user={user} 
           onLogout={handleLogout}
