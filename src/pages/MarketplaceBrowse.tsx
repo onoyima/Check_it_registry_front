@@ -439,7 +439,7 @@ export default function MarketplaceBrowse() {
                               <button
                                 className="btn btn-sm d-flex align-items-center justify-content-center gap-1 w-100 mt-2"
                                 style={{ background: 'var(--primary-500)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontWeight: 600, fontSize: 13 }}
-                                onClick={(e) => { e.stopPropagation(); addItem({ id: l.id, title: l.title, price: l.price, currency: l.currency, image: l.thumbnail, seller_id: '', seller_name: l.seller?.name || '', condition: l.condition, location: l.location }); showSuccess('Added to cart!') }}
+                                onClick={(e) => { e.stopPropagation(); addItem({ id: l.id, title: l.title, price: l.price, currency: l.currency, image: l.thumbnail || '', seller_id: '', seller_name: l.seller?.name || '', condition: l.condition, location: l.location }); showSuccess('Added to cart!') }}
                               >
                                 <ShoppingCart size={14} /> Add to Cart
                               </button>
