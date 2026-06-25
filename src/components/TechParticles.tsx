@@ -1,48 +1,30 @@
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
 import Particles from "@tsparticles/react";
-import { tsParticles } from "@tsparticles/engine";
 import { loadSlim } from "@tsparticles/slim";
 
 export default function TechParticles() {
-  const [init, setInit] = useState(false);
-
-  useEffect(() => {
-    loadSlim(tsParticles).then(() => setInit(true));
+  const particlesInit = useCallback(async (engine: any) => {
+    await loadSlim(engine);
   }, []);
 
-  if (!init) return null;
-
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 0, pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1, pointerEvents: 'none' }}>
       <Particles
         id="tsparticles"
+        init={particlesInit}
         options={{
-          background: {
-            color: {
-              value: "transparent",
-            },
-          },
+          background: { color: { value: "transparent" } },
           fpsLimit: 60,
           interactivity: {
             events: {
-              onHover: {
-                enable: true,
-                mode: "grab",
-              },
+              onHover: { enable: true, mode: "grab" },
             },
             modes: {
-              grab: {
-                distance: 140,
-                links: {
-                  opacity: 0.5,
-                },
-              },
+              grab: { distance: 140, links: { opacity: 0.5 } },
             },
           },
           particles: {
-            color: {
-              value: "#10b981",
-            },
+            color: { value: "#10b981" },
             links: {
               color: "#6366f1",
               distance: 150,
@@ -53,28 +35,18 @@ export default function TechParticles() {
             move: {
               direction: "none",
               enable: true,
-              outModes: {
-                default: "bounce",
-              },
+              outModes: { default: "bounce" },
               random: true,
               speed: 0.8,
               straight: false,
             },
             number: {
-              density: {
-                enable: true,
-              },
+              density: { enable: true },
               value: 60,
             },
-            opacity: {
-              value: 0.3,
-            },
-            shape: {
-              type: "circle",
-            },
-            size: {
-              value: { min: 1, max: 3 },
-            },
+            opacity: { value: 0.3 },
+            shape: { type: "circle" },
+            size: { value: { min: 1, max: 3 } },
           },
           detectRetina: true,
         }}
