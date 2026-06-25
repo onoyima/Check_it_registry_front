@@ -1,17 +1,14 @@
-import { useCallback } from "react";
-import Particles from "@tsparticles/react";
+import { ParticlesProvider, useParticlesProvider, Particles } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
 
-export default function TechParticles() {
-  const particlesInit = useCallback(async (engine: any) => {
-    await loadSlim(engine);
-  }, []);
+function ParticlesContent() {
+  const { loaded } = useParticlesProvider();
+  if (!loaded) return null;
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1, pointerEvents: 'none' }}>
       <Particles
         id="tsparticles"
-        init={particlesInit}
         options={{
           background: { color: { value: "transparent" } },
           fpsLimit: 60,
@@ -52,5 +49,13 @@ export default function TechParticles() {
         }}
       />
     </div>
+  );
+}
+
+export default function TechParticles() {
+  return (
+    <ParticlesProvider init={loadSlim}>
+      <ParticlesContent />
+    </ParticlesProvider>
   );
 }
