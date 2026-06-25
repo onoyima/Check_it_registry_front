@@ -84,6 +84,34 @@ export default function LandingPage() {
   };
 
   useEffect(() => {
+    const CACHE_KEY = 'landing_content_cache';
+    const CACHE_TTL = 3600000; // 1 hour
+
+    const getCached = () => {
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (!raw) return null;
+        const cached = JSON.parse(raw);
+        if (Date.now() - cached.timestamp > CACHE_TTL) {
+          localStorage.removeItem(CACHE_KEY);
+          return null;
+        }
+        return cached.data;
+      } catch { return null }
+    };
+
+    const setCached = (data: any) => {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
+      } catch {}
+    };
+
+    const cached = getCached();
+    if (cached) {
+      setTeamMembers(cached.team || []);
+      setTestimonials(cached.testimonials || []);
+    }
+
     const fetchLandingContent = async () => {
       try {
         const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || '';
@@ -94,6 +122,7 @@ export default function LandingPage() {
           if (data) {
             setTeamMembers(data.team || []);
             setTestimonials(data.testimonials || []);
+            setCached(data);
           }
         }
       } catch (err) {
@@ -152,60 +181,8 @@ export default function LandingPage() {
     }
   ];
 
-  const defaultTeam = [
-    {
-      name: "Sarah Okonjo",
-      role: "Chief Executive Officer",
-      image_url: "/images/team-ceo.png",
-      content: "Former cybersecurity consultant with a vision to digitize asset protection in Africa."
-    },
-    {
-      name: "David Adeleke",
-      role: "Head of Engineering",
-      image_url: "/images/team-cto.png",
-      content: "Systems architect ensuring our platform scales securely and reliably."
-    },
-    {
-      name: "Grace Ibrahim",
-      role: "Community Manager",
-      image_url: "/images/team-community.png",
-      content: "Connecting users with law enforcement and ensuring smooth recovery processes."
-    }
-  ];
-
-  const defaultTestimonials = [
-    {
-      name: "Emmanuel K.",
-      role: "Business Owner",
-      quote: "I got my stolen laptop back within 48 hours. The police scanned it, found my details, and called me immediately!",
-      location: "Lagos",
-      image: "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?auto=format&fit=crop&w=150&q=80"
-    },
-    {
-      name: "TechVillage Ltd",
-      role: "Gadget Retailer",
-      quote: "We buy used phones, and this registry is a lifesaver. We can instantly check if a phone is stolen before paying for it.",
-      location: "Abuja",
-      image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&q=80"
-    },
-    {
-      name: "Ngozi A.",
-      role: "Student",
-      quote: "It took just two minutes to register my new phone. Now I feel so much safer knowing it's officially linked to me.",
-      location: "Port Harcourt",
-      image: "https://images.unsplash.com/photo-1531123897727-8f129e1bf98c?auto=format&fit=crop&w=150&q=80"
-    },
-    {
-      name: "James O.",
-      role: "Freelancer",
-      quote: "As someone who travels with expensive gear, this service gives me total peace of mind. Highly recommended!",
-      location: "Abuja",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80"
-    }
-  ];
-
-  const displayTeam = teamMembers.length > 0 ? teamMembers : defaultTeam;
-  const displayTestimonials = testimonials.length > 0 ? testimonials : defaultTestimonials;
+  const displayTeam = teamMembers;
+  const displayTestimonials = testimonials;
 
   return (
     <>
