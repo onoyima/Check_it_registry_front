@@ -1,203 +1,197 @@
-import React, { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { AlertTriangle, Search, Eye, ChevronDown, Loader2, FileText, Clock, Smartphone } from 'lucide-react'
 import { Layout } from '../components/Layout'
-import { supabase } from '../lib/supabase'
-import { AlertTriangle, FileText, Eye, RefreshCw } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { useToast, ToastContainer } from '../components/Toast'
+import { Link } from 'react-router-dom'
 
-type ReportItem = {
-  id: number | string
-  case_id: number | string
-  status?: string
-  report_type?: string
+type Report = {
+  id: string
+  type: string
+  status: string
+  device_brand?: string
+  device_model?: string
+  location?: string
   description?: string
-  created_at?: string
-  occurred_at?: string
+  created_at: string
 }
 
-const formatDate = (value?: string | number | Date) => {
-  try {
-    if (!value) return 'Unknown'
-    const d = new Date(value)
-    return isNaN(d.getTime()) ? 'Unknown' : d.toLocaleDateString()
-  } catch {
-    return 'Unknown'
-  }
-}
-
-class PageErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; message?: string }>{
-  constructor(props: { children: React.ReactNode }) {
-    super(props)
-    this.state = { hasError: false, message: undefined }
-  }
-  static getDerivedStateFromError(error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unexpected error'
-    return { hasError: true, message }
-  }
-  componentDidCatch(error: unknown) {
-    console.error('ReportsV2 render error:', error)
-  }
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) { super(props); this.state = { hasError: false } }
+  static getDerivedStateFromError() { return { hasError: true } }
   render() {
-    if (this.state.hasError) {
-      return (
-        <Layout requireAuth>
-          <div className="container-fluid">
-            <div className="modern-card p-4">
-              <div className="alert alert-danger d-flex align-items-center">
-                <AlertTriangle size={18} className="me-2" />
-                <div>
-                  <div className="fw-semibold">Could not render reports.</div>
-                  <div style={{ color: 'var(--text-secondary)' }}>{this.state.message}</div>
-                </div>
-              </div>
-              <div className="d-flex gap-2">
-                <button className="btn btn-outline-primary" onClick={() => window.location.reload()}>Reload Page</button>
-                <Link to="/reports" className="btn btn-outline-secondary">Back to Reports</Link>
-              </div>
-            </div>
-          </div>
-        </Layout>
-      )
-    }
-    return this.props.children as React.ReactElement
+    if (this.state.hasError) return <div className="modern-card p-5 text-center"><AlertTriangle size={32} style={{ color: 'var(--danger-500)' }} /><h5 className="mt-3">Something went wrong</h5><p style={{ color: 'var(--text-secondary)' }}>Please try refreshing the page</p></div>
+    return this.props.children
   }
 }
+
+const STATUS_OPTIONS = ['all', 'open', 'investigating', 'resolved', 'closed', 'dismissed']
+const TYPE_OPTIONS = ['all', 'stolen', 'lost', 'found', 'fraud', 'other']
 
 export default function ReportsV2() {
-  const [reports, setReports] = useState<ReportItem[]>([])
+  const { user } = useAuth()
+  const { toasts, removeToast, showError } = useToast()
+  const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
-  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest')
 
-  const loadReports = async () => {
+  const fetchReports = async () => {
     try {
       setLoading(true)
-      setError('')
-      const reportsData = await supabase.reports.list()
-      const normalized: ReportItem[] = Array.isArray(reportsData)
-        ? reportsData as ReportItem[]
-        : (reportsData && Array.isArray((reportsData as any).data?.reports))
-          ? (reportsData as any).data.reports
-          : (reportsData && Array.isArray((reportsData as any).reports))
-            ? (reportsData as any).reports
-            : []
-      setReports(normalized)
-    } catch (err) {
-      console.error('ReportsV2 load error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load reports')
-    } finally {
-      setLoading(false)
+      const token = localStorage.getItem('auth_token')
+      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/reports`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      setReports(data.data || [])
+    } catch { setReports([]) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { fetchReports() }, [])
+
+  const filtered = reports.filter(r => {
+    if (statusFilter !== 'all' && r.status !== statusFilter) return false
+    if (typeFilter !== 'all' && r.type !== typeFilter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return r.id.toLowerCase().includes(q) || (r.device_brand || '').toLowerCase().includes(q) || (r.device_model || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q)
     }
+    return true
+  }).sort((a, b) => sortBy === 'newest' ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+  const statusBadge = (s: string) => {
+    const map: Record<string, string> = { open: 'status-pending', investigating: 'status-unverified', resolved: 'status-verified', closed: 'status-found', dismissed: 'status-stolen' }
+    return <span className={`status-badge ${map[s] || ''}`}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
   }
 
-  useEffect(() => {
-    loadReports()
-  }, [])
-
-  if (loading) {
-    return (
-      <Layout requireAuth>
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
-          <div className="text-center">
-            <div className="spinner-border mb-3" style={{ color: 'var(--primary-600)' }} role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-            <p style={{ color: 'var(--text-secondary)' }}>Loading your reports...</p>
-          </div>
-        </div>
-      </Layout>
-    )
+  const typeColor = (t: string) => {
+    const tl = t.toLowerCase()
+    if (tl === 'stolen') return { color: 'var(--danger-500)', bg: 'var(--danger-50)', icon: AlertTriangle }
+    if (tl === 'lost') return { color: 'var(--warning-500)', bg: 'var(--warning-50)', icon: Clock }
+    if (tl === 'found') return { color: 'var(--success-500)', bg: 'var(--success-50)', icon: Smartphone }
+    return { color: 'var(--primary-600)', bg: 'var(--primary-50)', icon: FileText }
   }
+
+  const stats = [
+    { label: 'Total', value: reports.length, color: 'var(--primary-600)' },
+    { label: 'Open', value: reports.filter(r => r.status === 'open').length, color: 'var(--warning-500)' },
+    { label: 'Resolved', value: reports.filter(r => r.status === 'resolved').length, color: 'var(--success-500)' },
+    { label: 'Stolen', value: reports.filter(r => r.type === 'stolen').length, color: 'var(--danger-500)' },
+  ]
 
   return (
-    <PageErrorBoundary>
-      <Layout requireAuth>
+    <Layout requireAuth>
+      <ErrorBoundary>
         <div className="container-fluid">
           <div className="row mb-4">
-            <div className="col-12 d-flex justify-content-between align-items-center">
-              <div>
-                <h1 className="h3 fw-bold" style={{ color: 'var(--text-primary)' }}>My Reports (V2)</h1>
-                <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>Simplified view to avoid render issues</p>
+            <div className="col-12">
+              <div className="page-header">
+                <div className="d-flex align-items-center gap-3 flex-wrap">
+                  <div className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--danger-500), var(--danger-700))' }}>
+                    <AlertTriangle size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h1>Incident Reports</h1>
+                    <p>Track and manage your device incident reports</p>
+                  </div>
+                </div>
               </div>
-              <div className="d-flex gap-2">
-                <button onClick={loadReports} className="btn btn-outline-primary d-flex align-items-center gap-2">
-                  <RefreshCw size={18} />
-                  Refresh
-                </button>
-                <Link to="/report-missing" className="btn-gradient-primary d-flex align-items-center gap-2">
-                  <AlertTriangle size={18} />
-                  New Report
+            </div>
+          </div>
+
+          <div className="row g-3 mb-4">
+            {stats.map(s => (
+              <div className="col-6 col-md-3" key={s.label}>
+                <div className="stat-card"><p className="stat-label">{s.label}</p><p className="stat-value" style={{ color: s.color }}>{s.value}</p></div>
+              </div>
+            ))}
+          </div>
+
+          <div className="modern-card p-3 mb-4">
+            <div className="row g-2 align-items-center">
+              <div className="col-12 col-md-4">
+                <div className="d-flex align-items-center gap-2 modern-input" style={{ padding: '0 12px' }}>
+                  <Search size={18} style={{ color: 'var(--text-secondary)' }} />
+                  <input type="text" placeholder="Search reports..." className="flex-grow-1" style={{ border: 'none', outline: 'none', background: 'transparent', padding: '8px 0' }} value={search} onChange={e => setSearch(e.target.value)} />
+                </div>
+              </div>
+              <div className="col-6 col-md-2">
+                <select className="modern-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                  {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                </select>
+              </div>
+              <div className="col-6 col-md-2">
+                <select className="modern-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                  {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                </select>
+              </div>
+              <div className="col-6 col-md-2">
+                <select className="modern-select" value={sortBy} onChange={e => setSortBy(e.target.value as any)}>
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                </select>
+              </div>
+              <div className="col-6 col-md-2 text-end">
+                <Link to="/report-incident" className="btn-gradient-danger d-inline-flex align-items-center gap-2 btn-sm">
+                  <AlertTriangle size={16} /> New Report
                 </Link>
               </div>
             </div>
           </div>
 
-          <div className="modern-card">
-            <div className="p-4 border-bottom" style={{ borderBottomColor: 'var(--border-color)' }}>
-              <h3 className="h5 mb-0" style={{ color: 'var(--text-primary)' }}>Reports ({reports.length})</h3>
+          {loading ? (
+            <div className="modern-card p-5 text-center"><Loader2 size={32} className="spinner-border" style={{ color: 'var(--primary-600)' }} /></div>
+          ) : filtered.length === 0 ? (
+            <div className="modern-card p-5 text-center">
+              <div className="empty-state">
+                <div className="empty-state-icon"><AlertTriangle size={48} /></div>
+                <h3>No Reports Found</h3>
+                <p>{search || statusFilter !== 'all' || typeFilter !== 'all' ? 'Try adjusting filters' : 'No incident reports yet'}</p>
+                {!search && statusFilter === 'all' && typeFilter === 'all' && <Link to="/report-incident" className="btn-gradient-danger mt-3 d-inline-flex align-items-center gap-2"><AlertTriangle size={16} /> Report Incident</Link>}
+              </div>
             </div>
-
-            <div className="p-4">
-              {error && (
-                <div className="alert alert-danger d-flex align-items-center mb-4">
-                  <AlertTriangle size={18} className="me-2" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {reports.length === 0 ? (
-                <div className="text-center py-5">
-                  <div 
-                    className="d-inline-flex align-items-center justify-content-center rounded-circle mb-4"
-                    style={{ width: '80px', height: '80px', backgroundColor: 'rgba(14, 165, 233, 0.1)' }}
-                  >
-                    <FileText size={40} style={{ color: 'var(--primary-600)' }} />
-                  </div>
-                  <h4 className="h5 mb-3" style={{ color: 'var(--text-primary)' }}>No reports yet</h4>
-                  <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                    You haven't filed any reports yet. Report a missing device to get started.
-                  </p>
-                  <Link to="/report-missing" className="btn-gradient-primary">
-                    <AlertTriangle size={18} className="me-2" />
-                    Report Missing Device
-                  </Link>
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table align-middle">
-                    <thead>
-                      <tr>
-                        <th>Case ID</th>
-                        <th>Status</th>
-                        <th>Type</th>
-                        <th>Reported</th>
-                        <th>Occurred</th>
-                        <th className="text-end">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reports.map((r) => (
-                        <tr key={String(r.id)}>
-                          <td>#{String(r.case_id)}</td>
-                          <td>{typeof r.status === 'string' ? r.status.replace('_', ' ') : 'unknown'}</td>
-                          <td>{typeof r.report_type === 'string' ? r.report_type : 'unknown'}</td>
-                          <td>{formatDate(r.created_at)}</td>
-                          <td>{formatDate(r.occurred_at)}</td>
-                          <td className="text-end">
-                            <button className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2" onClick={() => navigate(`/reports/${r.case_id}`)}>
-                              <Eye size={16} />
-                              View Details
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+          ) : (
+            <div className="row g-3">
+              <AnimatePresence>
+                {filtered.map((r, i) => {
+                  const tc = typeColor(r.type)
+                  const Icon = tc.icon
+                  return (
+                    <motion.div key={r.id} className="col-12" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} layout>
+                      <Link to={`/report/${r.id}`} className="text-decoration-none">
+                        <div className="modern-card p-3">
+                          <div className="row g-3 align-items-center">
+                            <div className="col-auto">
+                              <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width: 44, height: 44, background: tc.bg }}>
+                                <Icon size={22} style={{ color: tc.color }} />
+                              </div>
+                            </div>
+                            <div className="col">
+                              <p className="fw-medium mb-1" style={{ color: 'var(--text-primary)' }}>{r.device_brand || r.device_model || `Report #${r.id.slice(0, 8)}`}</p>
+                              <p style={{ color: 'var(--text-secondary)', fontSize: 12, margin: 0 }}>
+                                {r.type.charAt(0).toUpperCase() + r.type.slice(1)} &middot; {r.location || 'Location N/A'} &middot; {new Date(r.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="col-auto d-flex align-items-center gap-2">
+                              {statusBadge(r.status)}
+                              <Eye size={16} style={{ color: 'var(--text-secondary)' }} />
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
             </div>
-          </div>
+          )}
         </div>
-      </Layout>
-    </PageErrorBoundary>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+      </ErrorBoundary>
+    </Layout>
   )
 }

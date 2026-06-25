@@ -1,119 +1,162 @@
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { CreditCard, Plus, Check, Trash2, Star, Building2, Loader2, ArrowLeft } from 'lucide-react'
 import { Layout } from '../components/Layout'
-import { useNavigate } from 'react-router-dom'
-import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
+import { useToast, ToastContainer } from '../components/Toast'
+import { useNavigate, Link } from 'react-router-dom'
 
-type SavedMethod = {
+type PaymentMethod = {
   id: string
-  label: string
-  brand?: string
-  last4?: string
+  cardLast4: string
+  cardBrand: string
+  cardHolder: string
+  expiry: string
+  isDefault: boolean
 }
 
 export default function PaymentMethodSelection() {
+  const { user } = useAuth()
   const navigate = useNavigate()
-  const { showSuccess } = useToast()
-  const [amount] = useState(15.99)
-  const [savedMethods] = useState<SavedMethod[]>([
-    { id: 'card_4242', label: 'Visa ending in 4242', brand: 'Visa', last4: '4242' },
-    { id: 'apple_pay', label: 'Apple Pay' },
-  ])
-  const [selectedId, setSelectedId] = useState<string>(savedMethods[0]?.id || '')
+  const { toasts, removeToast, showSuccess, showError } = useToast()
+  const [methods, setMethods] = useState<PaymentMethod[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
-  const handlePay = () => {
-    if (!selectedId) return
-    showSuccess('Proceed to Confirmation', `Using ${savedMethods.find(m => m.id === selectedId)?.label}`)
-    navigate('/payments/confirm', { state: { amount, methodId: selectedId } })
+  useEffect(() => {
+    const fetchMethods = async () => {
+      try {
+        setLoading(true)
+        const token = localStorage.getItem('auth_token')
+        const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/payment/methods`, { headers: { Authorization: `Bearer ${token}` } })
+        if (!res.ok) throw new Error('Failed')
+        const data = await res.json()
+        setMethods(data.data || [])
+      } catch { setMethods([]) }
+      finally { setLoading(false) }
+    }
+    fetchMethods()
+  }, [])
+
+  const setDefault = async (id: string) => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      await fetch(`${import.meta.env.VITE_API_URL || '/api'}/payment/methods/${id}/default`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } })
+      setMethods(p => p.map(m => ({ ...m, isDefault: m.id === id })))
+      showSuccess('Default payment method updated')
+    } catch { showError('Failed to update default') }
+  }
+
+  const deleteMethod = async (id: string) => {
+    try {
+      setDeleting(id)
+      const token = localStorage.getItem('auth_token')
+      await fetch(`${import.meta.env.VITE_API_URL || '/api'}/payment/methods/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      setMethods(p => p.filter(m => m.id !== id))
+      showSuccess('Payment method removed')
+    } catch { showError('Failed to remove') }
+    finally { setDeleting(null) }
+  }
+
+  const brandIcon = (brand: string) => {
+    const colors: Record<string, string> = { visa: '#1A1F71', mastercard: '#EB001B', amex: '#2E77BC', discover: '#FF6000' }
+    return { color: colors[brand.toLowerCase()] || 'var(--text-secondary)', label: brand || 'Card' }
   }
 
   return (
-    <Layout requireAuth allowedRoles={["business"]}>
-      <div className="container">
-        <div className="row g-4">
-          <div className="col-12 col-lg-8 mx-auto">
-            {/* Header */}
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <h2 className="fw-bold mb-0" style={{ color: 'var(--text-primary)' }}>Select Payment</h2>
-            </div>
-
-            {/* Order Summary */}
-            <div className="modern-card p-4 mb-3">
-              <div className="d-flex justify-content-between align-items-start">
+    <Layout requireAuth>
+      <div className="container-fluid">
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="page-header">
+              <div className="d-flex align-items-center gap-3 flex-wrap">
+                <button className="btn-ghost d-inline-flex align-items-center gap-2" onClick={() => navigate(-1)}><ArrowLeft size={18} /> Back</button>
+                <div className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--primary-500), var(--primary-700))' }}>
+                  <CreditCard size={24} className="text-white" />
+                </div>
                 <div>
-                  <p className="mb-1" style={{ color: 'var(--text-secondary)' }}>Total Due</p>
-                  <p className="h3 fw-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-                    ${amount.toFixed(2)}
-                  </p>
-                  <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>Check It - Device Registry</p>
+                  <h1>Payment Methods</h1>
+                  <p>Manage your saved cards</p>
                 </div>
-                <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: 48, height: 48, background: 'var(--primary-100)', color: 'var(--primary-700)' }}>
-                  <span className="fw-bold">$</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Saved Methods */}
-            <div className="mb-3">
-              <h5 className="fw-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Saved Methods</h5>
-              <div className="modern-card">
-                {savedMethods.map((m, idx) => (
-                  <label key={m.id} className="d-flex align-items-center justify-content-between p-3" style={{ borderBottom: idx !== savedMethods.length - 1 ? '1px solid var(--border-color)' : 'none', cursor: 'pointer' }}>
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="rounded" style={{ width: 40, height: 28, background: 'var(--bg-secondary)' }} />
-                      <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>{m.label}</p>
-                    </div>
-                    <input
-                      type="radio"
-                      name="payment_method"
-                      className="form-check-input"
-                      checked={selectedId === m.id}
-                      onChange={() => setSelectedId(m.id)}
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Add New Method */}
-            <div className="mb-4">
-              <h5 className="fw-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Add New Method</h5>
-              <div className="modern-card">
-                <button className="w-100 d-flex align-items-center justify-content-between p-3 btn btn-link text-decoration-none" onClick={() => navigate('/payments/add-method')}>
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="rounded d-flex align-items-center justify-content-center" style={{ width: 40, height: 40, background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
-                      <span className="material-symbols-outlined">credit_card</span>
-                    </div>
-                    <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>Add Credit/Debit Card</p>
-                  </div>
-                  <span style={{ color: 'var(--text-secondary)' }}>›</span>
-                </button>
-                <div style={{ borderTop: '1px solid var(--border-color)' }} />
-                <button className="w-100 d-flex align-items-center justify-content-between p-3 btn btn-link text-decoration-none" disabled>
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="rounded d-flex align-items-center justify-content-center" style={{ width: 40, height: 40, background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
-                      <span className="material-symbols-outlined">account_balance</span>
-                    </div>
-                    <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>Link Bank Account (coming soon)</p>
-                  </div>
-                  <span style={{ color: 'var(--text-secondary)' }}>›</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Footer actions */}
-            <div className="modern-card p-3">
-              <div className="d-flex flex-column gap-3">
-                <button className="btn-gradient-primary w-100 py-3" onClick={handlePay}>
-                  Pay ${amount.toFixed(2)}
-                </button>
-                <div className="d-flex align-items-center justify-content-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                  <span style={{ fontSize: 14 }}>🔒</span>
-                  <small>Secure payment via Stripe</small>
+                <div className="ms-md-auto">
+                  <Link to="/payment/add" className="btn-gradient-primary d-inline-flex align-items-center gap-2">
+                    <Plus size={18} /> Add Method
+                  </Link>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {loading ? (
+          <div className="text-center py-5"><Loader2 size={32} className="spinner-border" style={{ color: 'var(--primary-600)' }} /></div>
+        ) : methods.length === 0 ? (
+          <div className="row justify-content-center">
+            <div className="col-lg-6">
+              <div className="modern-card p-5 text-center">
+                <div className="empty-state">
+                  <div className="empty-state-icon"><CreditCard size={48} /></div>
+                  <h3>No Payment Methods</h3>
+                  <p>Add a credit or debit card to get started</p>
+                  <Link to="/payment/add" className="btn-gradient-primary mt-3 d-inline-flex align-items-center gap-2"><Plus size={18} /> Add Method</Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="row justify-content-center">
+            <div className="col-lg-8">
+              <div className="row g-3">
+                <AnimatePresence>
+                  {methods.map((m, i) => {
+                    const bi = brandIcon(m.cardBrand)
+                    return (
+                      <motion.div key={m.id} className="col-12" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -100 }} layout>
+                        <div className={`modern-card p-3 ${selectedId === m.id ? 'border-primary' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setSelectedId(m.id)}>
+                          <div className="row g-3 align-items-center">
+                            <div className="col-auto">
+                              <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width: 56, height: 40, background: bi.color, color: '#fff', fontSize: 10, fontWeight: 700 }}>
+                                {bi.label}
+                              </div>
+                            </div>
+                            <div className="col">
+                              <p className="fw-medium mb-1">&bull;&bull;&bull;&bull; {m.cardLast4}</p>
+                              <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{m.cardHolder} &middot; Expires {m.expiry}</p>
+                            </div>
+                            <div className="col-auto d-flex flex-wrap gap-2 align-items-center">
+                              {m.isDefault && <span className="status-badge status-verified d-flex align-items-center gap-1"><Star size={12} /> Default</span>}
+                              {!m.isDefault && (
+                                <button className="btn-ghost d-inline-flex align-items-center gap-1" style={{ fontSize: 12 }} onClick={(e) => { e.stopPropagation(); setDefault(m.id) }}>
+                                  <Star size={14} /> Set Default
+                                </button>
+                              )}
+                              <button className="btn-ghost d-inline-flex align-items-center gap-1" style={{ fontSize: 12, color: 'var(--danger-500)' }} onClick={(e) => { e.stopPropagation(); deleteMethod(m.id) }} disabled={deleting === m.id}>
+                                {deleting === m.id ? <Loader2 size={14} className="spinner-border" /> : <Trash2 size={14} />}
+                              </button>
+                              <div className={`d-flex align-items-center justify-content-center rounded-circle border ${selectedId === m.id ? 'border-primary' : ''}`} style={{ width: 24, height: 24 }}>
+                                {selectedId === m.id && <div style={{ width: 14, height: 14, borderRadius: '50%', background: 'var(--primary-600)' }} />}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </AnimatePresence>
+              </div>
+
+              {selectedId && (
+                <div className="modern-card p-4 mt-3 text-center">
+                  <button className="btn-gradient-primary d-inline-flex align-items-center gap-2" onClick={() => navigate(-1)}>
+                    <Check size={18} /> Use Selected Card
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>
     </Layout>
   )

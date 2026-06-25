@@ -1,6 +1,5 @@
 // API Client for MySQL Backend
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || '/api');
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface User {
   id: string;
@@ -120,6 +119,20 @@ class ApiClient {
 
       throw fetchError;
     }
+  }
+
+  private async upload(endpoint: string, formData: FormData) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+    const response = await fetch(url, { method: 'POST', headers, body: formData });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      throw new Error(err.error || `Upload failed: ${response.status}`);
+    }
+    return response.json();
   }
 
   // Auth methods
@@ -644,6 +657,11 @@ class ApiClient {
 
   // Profile methods
   profile = {
+    uploadImage: (file: File) => {
+      const fd = new FormData();
+      fd.append('image', file);
+      return this.upload('/profile/image', fd);
+    },
     update: async (data: { name?: string; phone?: string; region?: string }) => {
       return this.request('/profile/update', {
         method: 'PUT',

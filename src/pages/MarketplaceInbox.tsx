@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Layout } from '../components/Layout'
-import { useToast, ToastContainer } from '../components/Toast'
+import { useToast } from '../components/Toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageSquare, Filter, RefreshCw, Search, Plus } from 'lucide-react'
+import {
+  MessageSquare, Filter, Search, Plus, Inbox,
+  ChevronRight, BadgeCheck, Clock
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 interface InboxMessage {
@@ -28,7 +31,6 @@ export default function MarketplaceInbox() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Placeholder: no backend route yet; show sample data
     const sample: InboxMessage[] = [
       {
         id: 'msg_1',
@@ -40,7 +42,7 @@ export default function MarketplaceInbox() {
         message: 'Hi, is this device still available? Can we meet at Accra Mall?',
         status: 'unread',
         created_at: new Date().toISOString(),
-        online: true
+        online: true,
       },
       {
         id: 'msg_2',
@@ -51,8 +53,19 @@ export default function MarketplaceInbox() {
         message: 'Please send additional photos and battery health.',
         status: 'read',
         created_at: new Date(Date.now() - 86400000).toISOString(),
-        online: false
-      }
+        online: false,
+      },
+      {
+        id: 'msg_3',
+        device_id: 'dev_456',
+        device_title: 'Tecno Camon 18',
+        from_name: 'Ama Serwaa',
+        subject: 'Price negotiation',
+        message: 'Would you consider ₦450,000? I can pick it up today.',
+        status: 'unread',
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        online: true,
+      },
     ]
     setItems(sample)
     setLoading(false)
@@ -68,124 +81,161 @@ export default function MarketplaceInbox() {
 
   const getInitials = (name: string) => {
     const parts = name.trim().split(' ')
-    const first = parts[0]?.charAt(0).toUpperCase() || ''
-    const second = parts[1]?.charAt(0).toUpperCase() || ''
-    return `${first}${second}` || first
+    return ((parts[0]?.charAt(0) || '') + (parts[1]?.charAt(0) || '')).toUpperCase() || '?'
   }
 
-  const refresh = async () => {
-    try {
-      setLoading(true)
-      // future: fetch from backend endpoint
-      setLoading(false)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error refreshing inbox'
-      setError(msg)
-      showError('Inbox Error', msg)
-      setLoading(false)
-    }
+  const timeAgo = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'Just now'
+    if (mins < 60) return `${mins}m ago`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    if (days < 7) return `${days}d ago`
+    return new Date(iso).toLocaleDateString()
   }
 
   return (
     <Layout requireAuth>
-      <div className="container-fluid">
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="row mb-4">
-          <div className="col-12 d-flex justify-content-between align-items-center">
+      <div className="container-fluid" style={{ maxWidth: 900, margin: '0 auto' }}>
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="page-header d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div>
-              <h1 className="display-6 fw-bold" style={{ color: 'var(--text-primary)' }}>Marketplace Inbox</h1>
-              <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>Manage buyer inquiries and messages</p>
+              <h1>Inbox</h1>
+              <p>Manage buyer inquiries and messages</p>
             </div>
-            <div className="d-flex gap-2">
-              <button onClick={refresh} className="btn btn-outline-secondary d-flex align-items-center gap-2"><RefreshCw size={16} /> Refresh</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ position: 'relative' }}>
+                <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                <input
+                  className="modern-input"
+                  style={{ paddingLeft: 36, paddingTop: 8, paddingBottom: 8, fontSize: 14, width: 220 }}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search messages..."
+                />
+              </div>
+              <select
+                className="modern-select"
+                style={{ width: 140, paddingTop: 8, paddingBottom: 8, fontSize: 14 }}
+                value={filter}
+                onChange={e => setFilter(e.target.value as any)}
+              >
+                <option value="all">All Messages</option>
+                <option value="unread">Unread</option>
+                <option value="read">Read</option>
+              </select>
             </div>
           </div>
         </motion.div>
 
-        {/* Filters */}
-        <div className="modern-card p-3 mb-3">
-          <div className="row g-3 align-items-end">
-            <div className="col-md-4">
-              <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Search</label>
-              <div className="input-group">
-                <span className="input-group-text"><Search size={16} /></span>
-                <input value={search} onChange={e => setSearch(e.target.value)} className="form-control" placeholder="Subject, message, device, sender" />
-              </div>
-            </div>
-            <div className="col-md-3">
-              <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Status</label>
-              <div className="d-flex align-items-center gap-2">
-                <Filter size={16} style={{ color: 'var(--text-secondary)' }} />
-                <select value={filter} onChange={e => setFilter(e.target.value as 'all' | 'read' | 'unread')} className="form-select">
-                  <option value="all">All</option>
-                  <option value="unread">Unread</option>
-                  <option value="read">Read</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Conversation list inspired by mobile_app/marketplace_inbox */}
         {loading ? (
-          <div className="text-center py-5">
-            <div className="spinner-border" style={{ color: 'var(--primary-600)' }} />
-            <p className="mt-3" style={{ color: 'var(--text-secondary)' }}>Loading inbox…</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="modern-card" style={{ padding: 20, display: 'flex', gap: 16, alignItems: 'center' }}>
+                <div className="skeleton" style={{ width: 56, height: 56, borderRadius: '50%' }} />
+                <div style={{ flex: 1 }}>
+                  <div className="skeleton skeleton-title" style={{ width: '30%' }} />
+                  <div className="skeleton skeleton-text" style={{ width: '60%' }} />
+                  <div className="skeleton skeleton-text" style={{ width: '40%' }} />
+                </div>
+              </div>
+            ))}
           </div>
         ) : error ? (
-          <div className="modern-card p-4 text-center" style={{ color: 'var(--danger-500)' }}>{error}</div>
+          <div className="modern-card" style={{ padding: 32, textAlign: 'center' }}>
+            <p style={{ color: 'var(--danger-500)' }}>{error}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <Inbox size={28} />
+            </div>
+            <h3>No messages yet</h3>
+            <p>When buyers message you about your listings, they'll appear here.</p>
+          </div>
         ) : (
-          <div className="modern-card p-0 position-relative">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <AnimatePresence>
               {filtered.map(m => (
-                <motion.div key={m.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-                  className="p-3 d-flex align-items-center gap-3 justify-between rounded inbox-item"
-                  style={{ borderBottom: '1px solid var(--border-color)' }}
+                <motion.div
+                  key={m.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="modern-card"
+                  style={{
+                    padding: 16,
+                    cursor: 'pointer',
+                    borderLeft: m.status === 'unread' ? '3px solid var(--primary-500)' : '3px solid transparent',
+                    background: m.status === 'unread' ? 'rgba(34, 197, 94, 0.02)' : undefined,
+                  }}
                   onClick={() => navigate(`/marketplace-inbox/${m.id}`)}
                 >
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="position-relative">
-                      <div className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: 56, height: 56, backgroundColor: 'var(--bg-tertiary)', color: 'var(--primary-700)', fontWeight: 700 }}>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                    <div style={{ position: 'relative' }}>
+                      <div
+                        className="avatar"
+                        style={{
+                          width: 52, height: 52, fontSize: 18,
+                          background: m.online ? 'var(--primary-500)' : 'var(--gray-400)',
+                        }}
+                      >
                         {getInitials(m.from_name)}
                       </div>
                       {m.online && (
-                        <span className="position-absolute" style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: 'var(--success-500)', bottom: 0, right: 0, border: '2px solid var(--bg-primary)' }} />
+                        <span
+                          style={{
+                            position: 'absolute', bottom: 0, right: 0, width: 14, height: 14,
+                            borderRadius: '50%', background: 'var(--success-500)',
+                            border: '3px solid var(--bg-primary)',
+                          }}
+                        />
                       )}
                     </div>
-                    <div className="flex-grow-1 overflow-hidden">
-                      <p className="mb-0" style={{ color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.from_name}</p>
-                      <p className="mb-0" style={{ color: 'var(--primary-600)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.subject}</p>
-                      <p className="mb-0" style={{ color: 'var(--text-secondary)', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.message}</p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 600, fontSize: 15 }}>{m.from_name}</span>
+                          {m.online && (
+                            <span style={{ fontSize: 12, color: 'var(--success-500)' }}>Online</span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 12, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Clock size={12} /> {timeAgo(m.created_at)}
+                        </span>
+                      </div>
+                      <div style={{ fontWeight: 500, fontSize: 14, color: m.status === 'unread' ? 'var(--text-primary)' : 'var(--text-secondary)', marginBottom: 2 }}>
+                        {m.subject}
+                      </div>
+                      <p style={{
+                        fontSize: 13, color: 'var(--text-tertiary)', margin: 0,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>
+                        {m.message}
+                      </p>
                       {m.device_title && (
-                        <small className="text-muted" style={{ fontSize: 12 }}>Device: {m.device_title}</small>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                          <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>
+                            {m.device_title}
+                          </span>
+                          {m.status === 'unread' && (
+                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: 'var(--primary-500)', color: '#fff' }}>
+                              New
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
-                  <div className="d-flex flex-column align-items-end gap-2">
-                    <small style={{ color: 'var(--text-tertiary)' }}>{new Date(m.created_at).toLocaleString()}</small>
-                    {m.status === 'unread' && (
-                      <div className="d-flex align-items-center justify-content-center" style={{ minWidth: 28, height: 24, borderRadius: 12, background: 'var(--primary-600)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '0 8px' }}>Unread</div>
-                    )}
+                    <ChevronRight size={18} style={{ color: 'var(--text-tertiary)', flexShrink: 0, marginTop: 16 }} />
                   </div>
                 </motion.div>
               ))}
-              {filtered.length === 0 && (
-                <div className="p-4 text-center" style={{ color: 'var(--text-secondary)' }}>No messages</div>
-              )}
             </AnimatePresence>
-
-            {/* Floating compose button */}
-            <button
-              className="btn-gradient-primary d-flex align-items-center gap-2"
-              style={{ position: 'sticky', bottom: 16, left: 'calc(100% - 64px)', width: 56, height: 56, borderRadius: 28, justifyContent: 'center' }}
-              title="Compose"
-              onClick={() => showError('Compose', 'Compose modal is coming soon')}
-            >
-              <Plus size={22} />
-            </button>
           </div>
         )}
-
-        <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>
     </Layout>
   )

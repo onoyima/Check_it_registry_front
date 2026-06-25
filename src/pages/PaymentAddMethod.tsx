@@ -1,133 +1,135 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { CreditCard, Plus, Shield, CheckCircle, Loader2, ArrowLeft, Building2, Calendar, Lock } from 'lucide-react'
 import { Layout } from '../components/Layout'
-import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
+import { useToast, ToastContainer } from '../components/Toast'
 import { useNavigate } from 'react-router-dom'
 
-import { supabase } from '../lib/supabase'
-
 export default function PaymentAddMethod() {
-  const { showSuccess, showError } = useToast()
+  const { user } = useAuth()
   const navigate = useNavigate()
-  const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
-    name: '',
-    number: '',
-    exp: '',
-    cvc: '',
-    country: 'United States',
-    address: '',
-    city: '',
-    postal: '',
-    isDefault: true,
-  })
+  const { toasts, removeToast, showSuccess, showError } = useToast()
+  const [form, setForm] = useState({ cardNumber: '', cardHolder: '', expiry: '', cvv: '', billingZip: '', isDefault: false })
+  const [submitting, setSubmitting] = useState(false)
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target as any
-    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+  const formatCard = (v: string) => {
+    const digits = v.replace(/\D/g, '').slice(0, 16)
+    return digits.replace(/(\d{4})(?=\d)/g, '$1 ')
   }
 
-  const onSave = async () => {
-    if (!form.name || !form.number || !form.exp || !form.cvc) {
-        showError('Validation Error', 'Please fill in all required fields')
-        return
-    }
-    
+  const formatExpiry = (v: string) => {
+    const d = v.replace(/\D/g, '').slice(0, 4)
+    if (d.length >= 3) return d.slice(0, 2) + '/' + d.slice(2)
+    return d
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (form.cardNumber.replace(/\s/g, '').length < 13) { showError('Enter a valid card number'); return }
+    if (form.expiry.length < 5) { showError('Enter a valid expiry date'); return }
+    if (form.cvv.length < 3) { showError('Enter a valid CVV'); return }
     try {
-        setSaving(true)
-        await supabase.payments.addMethod(form)
-        showSuccess('Payment Method Saved', `${form.name} •••• ${form.number.slice(-4)}`)
-        navigate(-1)
-    } catch (err: any) {
-        console.error(err)
-        showError('Save Failed', err.message || 'Failed to save payment method')
-    } finally {
-        setSaving(false)
-    }
+      setSubmitting(true)
+      const token = localStorage.getItem('auth_token')
+      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/payment/methods`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...form, cardNumber: form.cardNumber.replace(/\s/g, ''), userId: user?.id }),
+      })
+      if (!res.ok) throw new Error('Failed to add payment method')
+      showSuccess('Payment method added!')
+      setTimeout(() => navigate('/payment-methods'), 1200)
+    } catch (err: any) { showError(err.message) }
+    finally { setSubmitting(false) }
   }
 
   return (
-    <Layout requireAuth allowedRoles={["business"]}>
-      <div className="container">
-        <div className="row g-4">
-          <div className="col-12 col-lg-8 mx-auto">
-            <h2 className="fw-bold mb-3" style={{ color: 'var(--text-primary)' }}>Add Payment Method</h2>
-
-            {/* Card Information */}
-            <div className="modern-card p-4 mb-3">
-              <h6 className="text-uppercase fw-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Card Information</h6>
-              <div className="mb-3">
-                <label className="form-label">Cardholder Name</label>
-                <input name="name" value={form.name} onChange={onChange} className="modern-input" placeholder="John Doe" />
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Card Number</label>
-                <div className="d-flex">
-                  <input name="number" value={form.number} onChange={onChange} className="modern-input" placeholder="1234 5678 9101 1121" />
+    <Layout requireAuth>
+      <div className="container-fluid">
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="page-header">
+              <div className="d-flex align-items-center gap-3">
+                <button className="btn-ghost d-inline-flex align-items-center gap-2" onClick={() => navigate(-1)}><ArrowLeft size={18} /> Back</button>
+                <div className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--primary-500), var(--primary-700))' }}>
+                  <CreditCard size={24} className="text-white" />
+                </div>
+                <div>
+                  <h1>Add Payment Method</h1>
+                  <p>Securely add a credit or debit card</p>
                 </div>
               </div>
-              <div className="row g-3">
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Expiration</label>
-                  <input name="exp" value={form.exp} onChange={onChange} className="modern-input" placeholder="MM/YY" />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label">CVC</label>
-                  <input name="cvc" value={form.cvc} onChange={onChange} className="modern-input" placeholder="123" />
-                </div>
-              </div>
-            </div>
-
-            {/* Billing Address */}
-            <div className="modern-card p-4 mb-3">
-              <h6 className="text-uppercase fw-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Billing Address</h6>
-              <div className="mb-3">
-                <label className="form-label">Country</label>
-                <select name="country" value={form.country} onChange={onChange} className="modern-input">
-                  <option>United States</option>
-                  <option>Canada</option>
-                  <option>Mexico</option>
-                </select>
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Address</label>
-                <input name="address" value={form.address} onChange={onChange} className="modern-input" placeholder="123 Main Street" />
-              </div>
-              <div className="row g-3">
-                <div className="col-12 col-md-6">
-                  <label className="form-label">City</label>
-                  <input name="city" value={form.city} onChange={onChange} className="modern-input" placeholder="Anytown" />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Postal Code</label>
-                  <input name="postal" value={form.postal} onChange={onChange} className="modern-input" placeholder="12345" />
-                </div>
-              </div>
-            </div>
-
-            {/* Default toggle */}
-            <div className="modern-card p-3 mb-3">
-              <div className="d-flex align-items-center justify-content-between">
-                <label className="mb-0">Set as Default Payment Method</label>
-                <input type="checkbox" name="isDefault" checked={form.isDefault} onChange={onChange} className="form-check-input" />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="modern-card p-3">
-              <div className="d-flex align-items-start justify-content-center gap-2 mb-3" style={{ color: 'var(--text-secondary)' }}>
-                <span style={{ fontSize: 14 }}>🔒</span>
-                <small>Your payment information is encrypted and stored securely.</small>
-              </div>
-              <button 
-                className="btn-gradient-primary w-100 py-3" 
-                onClick={onSave}
-                disabled={saving}
-              >
-                {saving ? 'Saving...' : 'Save Card'}
-              </button>
             </div>
           </div>
         </div>
+
+        <div className="row justify-content-center">
+          <div className="col-lg-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <form onSubmit={handleSubmit}>
+                <div className="modern-card p-4 p-md-5 mb-4">
+                  <div className="d-flex align-items-center justify-content-between mb-4 p-3 rounded-3" style={{ backgroundColor: 'var(--primary-50)' }}>
+                    <div className="d-flex align-items-center gap-2">
+                      <Shield size={20} style={{ color: 'var(--primary-600)' }} />
+                      <span style={{ fontSize: 13, color: 'var(--primary-700)' }}>Your information is encrypted</span>
+                    </div>
+                    <Lock size={18} style={{ color: 'var(--primary-600)' }} />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Card Number</label>
+                    <div className="d-flex align-items-center gap-2 modern-input" style={{ padding: '0 12px' }}>
+                      <CreditCard size={18} style={{ color: 'var(--text-secondary)' }} />
+                      <input className="flex-grow-1" style={{ border: 'none', outline: 'none', background: 'transparent', padding: '12px 0', fontFamily: 'monospace' }} placeholder="1234 5678 9012 3456" value={form.cardNumber} onChange={e => setForm(p => ({ ...p, cardNumber: formatCard(e.target.value) }))} required />
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Cardholder Name</label>
+                    <div className="d-flex align-items-center gap-2 modern-input" style={{ padding: '0 12px' }}>
+                      <Building2 size={18} style={{ color: 'var(--text-secondary)' }} />
+                      <input className="flex-grow-1" style={{ border: 'none', outline: 'none', background: 'transparent', padding: '12px 0' }} placeholder="John Doe" value={form.cardHolder} onChange={e => setForm(p => ({ ...p, cardHolder: e.target.value }))} required />
+                    </div>
+                  </div>
+
+                  <div className="row g-3 mb-3">
+                    <div className="col-md-6">
+                      <label className="form-label">Expiry Date</label>
+                      <div className="d-flex align-items-center gap-2 modern-input" style={{ padding: '0 12px' }}>
+                        <Calendar size={18} style={{ color: 'var(--text-secondary)' }} />
+                        <input className="flex-grow-1" style={{ border: 'none', outline: 'none', background: 'transparent', padding: '12px 0', fontFamily: 'monospace' }} placeholder="MM/YY" value={form.expiry} onChange={e => setForm(p => ({ ...p, expiry: formatExpiry(e.target.value) }))} required />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label">CVV</label>
+                      <div className="d-flex align-items-center gap-2 modern-input" style={{ padding: '0 12px' }}>
+                        <Lock size={18} style={{ color: 'var(--text-secondary)' }} />
+                        <input type="password" className="flex-grow-1" style={{ border: 'none', outline: 'none', background: 'transparent', padding: '12px 0', fontFamily: 'monospace' }} placeholder="***" maxLength={4} value={form.cvv} onChange={e => setForm(p => ({ ...p, cvv: e.target.value.replace(/\D/g, '') }))} required />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label">Billing ZIP Code</label>
+                    <input className="modern-input" placeholder="Enter ZIP" value={form.billingZip} onChange={e => setForm(p => ({ ...p, billingZip: e.target.value }))} />
+                  </div>
+
+                  <label className="d-flex align-items-center gap-2 mb-4" style={{ cursor: 'pointer' }}>
+                    <input type="checkbox" checked={form.isDefault} onChange={e => setForm(p => ({ ...p, isDefault: e.target.checked }))} />
+                    <span style={{ fontSize: 14 }}>Set as default payment method</span>
+                  </label>
+
+                  <button type="submit" className="btn-gradient-primary w-100 d-flex align-items-center justify-content-center gap-2 py-3" disabled={submitting}>
+                    {submitting ? <Loader2 size={20} className="spinner-border" /> : <Plus size={20} />}
+                    {submitting ? 'Adding...' : 'Add Payment Method'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        </div>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>
     </Layout>
   )

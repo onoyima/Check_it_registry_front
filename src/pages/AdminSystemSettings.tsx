@@ -1,74 +1,274 @@
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { Layout } from '../components/Layout'
+import { Settings, Shield, Bell, Smartphone, Globe, Clock, Save, RefreshCw, Lock, Key, Users, DollarSign, TrendingUp } from 'lucide-react'
+import { useToast, ToastContainer } from '../components/Toast'
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.06 } }
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 }
+}
 
 export default function AdminSystemSettings() {
   const [featureFlags, setFeatureFlags] = useState({
-    marketplace: true,
-    leaPortal: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    publicCheck: true,
+    marketplace: true, leaPortal: true, emailNotifications: true,
+    smsNotifications: false, publicCheck: true, bulkRegistration: false,
+    autoVerification: false
   })
   const [security, setSecurity] = useState({
-    require2FA: true,
-    sessionTimeout: 30,
-    allowPasswordless: false
+    require2FA: true, sessionTimeout: 30, allowPasswordless: false,
+    maxLoginAttempts: 5, passwordMinLength: 8
   })
+  const [saving, setSaving] = useState(false)
+  const [platformFee, setPlatformFee] = useState('2.50')
+  const [loadingFee, setLoadingFee] = useState(true)
 
-  const updateFlag = (k: keyof typeof featureFlags) => setFeatureFlags(prev => ({ ...prev, [k]: !prev[k] }))
-  const onSave = () => {
-    // Mock save
-    alert('Settings saved')
+  const { toasts, removeToast, showSuccess, showError } = useToast()
+
+  useEffect(() => {
+    const fetchFee = async () => {
+      try {
+        const token = localStorage.getItem('auth_token')
+        const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/escrow/admin/settings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (!res.ok) throw new Error('Failed to fetch')
+        const data = await res.json()
+        if (data.platformFeePercent) setPlatformFee(String(data.platformFeePercent))
+      } catch { /* use default */ } finally { setLoadingFee(false) }
+    }
+    fetchFee()
+  }, [])
+
+  const updateFlag = (k: keyof typeof featureFlags) =>
+    setFeatureFlags(prev => ({ ...prev, [k]: !prev[k] }))
+
+  const onSave = async () => {
+    setSaving(true)
+    try {
+      const token = localStorage.getItem('auth_token')
+      const feeNum = parseFloat(platformFee)
+      if (isNaN(feeNum) || feeNum < 0 || feeNum > 100) throw new Error('Fee must be between 0 and 100')
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/escrow/admin/settings`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platformFeePercent: feeNum })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Save failed')
+      showSuccess('Settings saved successfully')
+    } catch (err: any) {
+      showError(err.message)
+    } finally { setSaving(false) }
   }
 
-  return (
-    <Layout requireAuth allowedRoles={["admin"]}>
-      <div className="container py-4">
-        <h2 className="fw-bold mb-3">System Settings</h2>
+  const FlagToggle = ({ label, checked, onChange, icon }: { label: string; checked: boolean; onChange: () => void; icon: React.ReactNode }) => (
+    <div className="d-flex justify-content-between align-items-center py-3 px-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
+      <div className="d-flex align-items-center gap-3">
+        <div className="stat-icon" style={{ width: 36, height: 36, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>{icon}</div>
+        <span style={{ color: 'var(--text-primary)' }}>{label}</span>
+      </div>
+      <div className="form-check form-switch mb-0">
+        <input className="form-check-input" type="checkbox" checked={checked} onChange={onChange}
+          style={{ cursor: 'pointer', width: 44, height: 22 }} />
+      </div>
+    </div>
+  )
 
-        <div className="row g-3">
-          <div className="col-12 col-lg-6">
-            <div className="modern-card p-3">
-              <h5 className="mb-3">Feature Flags</h5>
-              <div className="d-flex flex-column gap-2">
-                {Object.keys(featureFlags).map((k) => (
-                  <div key={k} className="d-flex justify-content-between align-items-center">
-                    <span className="text-secondary text-capitalize">{k.replace(/([A-Z])/g, ' $1')}</span>
-                    <div className="form-check form-switch">
-                      <input className="form-check-input" type="checkbox" checked={(featureFlags as any)[k]} onChange={() => updateFlag(k as any)} />
+  return (
+    <Layout requireAuth allowedRoles={['admin', 'super_admin']}>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="container-fluid px-0">
+        <motion.div variants={containerVariants} initial="hidden" animate="visible">
+          <motion.div variants={itemVariants} className="page-header">
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3">
+              <div>
+                <h1>System Settings</h1>
+                <p>Configure platform features, security, and preferences</p>
+              </div>
+              <button onClick={onSave} className="btn-gradient-primary" disabled={saving}>
+                <Save size={18} />
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </motion.div>
+
+          <div className="row g-4">
+            <motion.div variants={itemVariants} className="col-lg-6">
+              <div className="modern-card">
+                <div className="p-4 border-bottom d-flex align-items-center gap-3" style={{ borderBottomColor: 'var(--border-color)' }}>
+                  <div className="stat-icon" style={{ background: 'rgba(14, 165, 233, 0.1)', color: 'var(--primary-600)' }}>
+                    <Settings size={22} />
+                  </div>
+                  <div>
+                    <h3 className="h5 mb-1" style={{ color: 'var(--text-primary)' }}>Feature Flags</h3>
+                    <small style={{ color: 'var(--text-tertiary)' }}>Enable or disable platform features</small>
+                  </div>
+                </div>
+                <div className="p-2">
+                  <FlagToggle label="Marketplace" checked={featureFlags.marketplace} onChange={() => updateFlag('marketplace')} icon={<Smartphone size={16} />} />
+                  <FlagToggle label="LEA Portal" checked={featureFlags.leaPortal} onChange={() => updateFlag('leaPortal')} icon={<Shield size={16} />} />
+                  <FlagToggle label="Email Notifications" checked={featureFlags.emailNotifications} onChange={() => updateFlag('emailNotifications')} icon={<Bell size={16} />} />
+                  <FlagToggle label="SMS Notifications" checked={featureFlags.smsNotifications} onChange={() => updateFlag('smsNotifications')} icon={<Bell size={16} />} />
+                  <FlagToggle label="Public Device Check" checked={featureFlags.publicCheck} onChange={() => updateFlag('publicCheck')} icon={<Globe size={16} />} />
+                  <FlagToggle label="Bulk Registration" checked={featureFlags.bulkRegistration} onChange={() => updateFlag('bulkRegistration')} icon={<Users size={16} />} />
+                  <FlagToggle label="Auto Verification" checked={featureFlags.autoVerification} onChange={() => updateFlag('autoVerification')} icon={<Smartphone size={16} />} />
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="col-lg-6">
+              <div className="modern-card">
+                <div className="p-4 border-bottom d-flex align-items-center gap-3" style={{ borderBottomColor: 'var(--border-color)' }}>
+                  <div className="stat-icon" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}>
+                    <Lock size={22} />
+                  </div>
+                  <div>
+                    <h3 className="h5 mb-1" style={{ color: 'var(--text-primary)' }}>Security</h3>
+                    <small style={{ color: 'var(--text-tertiary)' }}>Authentication and security settings</small>
+                  </div>
+                </div>
+                <div className="p-4 d-flex flex-column gap-4">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="stat-icon" style={{ width: 36, height: 36, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                        <Key size={16} />
+                      </div>
+                      <div>
+                        <div style={{ color: 'var(--text-primary)' }}>Require 2FA for Admins</div>
+                        <small style={{ color: 'var(--text-tertiary)' }}>Extra layer of security</small>
+                      </div>
+                    </div>
+                    <div className="form-check form-switch mb-0">
+                      <input className="form-check-input" type="checkbox" checked={security.require2FA}
+                        onChange={(e) => setSecurity(prev => ({ ...prev, require2FA: e.target.checked }))}
+                        style={{ cursor: 'pointer', width: 44, height: 22 }} />
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="col-12 col-lg-6">
-            <div className="modern-card p-3">
-              <h5 className="mb-3">Security</h5>
-              <div className="mb-3 d-flex justify-content-between align-items-center">
-                <span className="text-secondary">Require 2FA for admins</span>
-                <div className="form-check form-switch">
-                  <input className="form-check-input" type="checkbox" checked={security.require2FA} onChange={(e) => setSecurity(prev => ({ ...prev, require2FA: e.target.checked }))} />
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="stat-icon" style={{ width: 36, height: 36, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                        <Clock size={16} />
+                      </div>
+                      <div>
+                        <div style={{ color: 'var(--text-primary)' }}>Session Timeout</div>
+                        <small style={{ color: 'var(--text-tertiary)' }}>Minutes before auto-logout</small>
+                      </div>
+                    </div>
+                    <input type="number" className="modern-input" style={{ maxWidth: 100, padding: '8px 12px' }}
+                      value={security.sessionTimeout}
+                      onChange={(e) => setSecurity(prev => ({ ...prev, sessionTimeout: Number(e.target.value) }))} />
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="stat-icon" style={{ width: 36, height: 36, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                        <Key size={16} />
+                      </div>
+                      <div>
+                        <div style={{ color: 'var(--text-primary)' }}>Passwordless Login</div>
+                        <small style={{ color: 'var(--text-tertiary)' }}>Email-based magic links</small>
+                      </div>
+                    </div>
+                    <div className="form-check form-switch mb-0">
+                      <input className="form-check-input" type="checkbox" checked={security.allowPasswordless}
+                        onChange={(e) => setSecurity(prev => ({ ...prev, allowPasswordless: e.target.checked }))}
+                        style={{ cursor: 'pointer', width: 44, height: 22 }} />
+                    </div>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="stat-icon" style={{ width: 36, height: 36, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                        <Shield size={16} />
+                      </div>
+                      <div>
+                        <div style={{ color: 'var(--text-primary)' }}>Max Login Attempts</div>
+                        <small style={{ color: 'var(--text-tertiary)' }}>Before temporary lockout</small>
+                      </div>
+                    </div>
+                    <input type="number" className="modern-input" style={{ maxWidth: 100, padding: '8px 12px' }}
+                      value={security.maxLoginAttempts}
+                      onChange={(e) => setSecurity(prev => ({ ...prev, maxLoginAttempts: Number(e.target.value) }))} />
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="stat-icon" style={{ width: 36, height: 36, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                        <Lock size={16} />
+                      </div>
+                      <div>
+                        <div style={{ color: 'var(--text-primary)' }}>Min Password Length</div>
+                        <small style={{ color: 'var(--text-tertiary)' }}>Characters required</small>
+                      </div>
+                    </div>
+                    <input type="number" className="modern-input" style={{ maxWidth: 100, padding: '8px 12px' }}
+                      value={security.passwordMinLength}
+                      onChange={(e) => setSecurity(prev => ({ ...prev, passwordMinLength: Number(e.target.value) }))} />
+                  </div>
                 </div>
               </div>
-              <div className="mb-3 d-flex justify-content-between align-items-center">
-                <span className="text-secondary">Session timeout (minutes)</span>
-                <input type="number" className="form-control" style={{ maxWidth: 120 }} value={security.sessionTimeout} onChange={(e) => setSecurity(prev => ({ ...prev, sessionTimeout: Number(e.target.value) }))} />
-              </div>
-              <div className="mb-3 d-flex justify-content-between align-items-center">
-                <span className="text-secondary">Allow passwordless login</span>
-                <div className="form-check form-switch">
-                  <input className="form-check-input" type="checkbox" checked={security.allowPasswordless} onChange={(e) => setSecurity(prev => ({ ...prev, allowPasswordless: e.target.checked }))} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div className="d-flex justify-content-end mt-3">
-          <button className="btn-gradient-primary" onClick={onSave}>Save Changes</button>
-        </div>
+              <motion.div variants={itemVariants} className="modern-card mt-4">
+                <div className="p-4 border-bottom d-flex align-items-center gap-3" style={{ borderBottomColor: 'var(--border-color)' }}>
+                  <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success-500)' }}>
+                    <DollarSign size={22} />
+                  </div>
+                  <div>
+                    <h3 className="h5 mb-1" style={{ color: 'var(--text-primary)' }}>Platform Fee</h3>
+                    <small style={{ color: 'var(--text-tertiary)' }}>Escrow fee charged on marketplace sales</small>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <label className="d-block mb-2" style={{ color: 'var(--text-primary)', fontWeight: 500, fontSize: 14 }}>
+                    Fee Percentage <TrendingUp size={14} style={{ color: 'var(--text-secondary)' }} />
+                  </label>
+                  <div className="d-flex align-items-center gap-3">
+                    <input type="number" step="0.01" min="0" max="100" className="modern-input" style={{ maxWidth: 140, padding: '10px 14px', fontSize: 18, fontWeight: 600 }}
+                      value={platformFee}
+                      onChange={e => setPlatformFee(e.target.value)}
+                      disabled={loadingFee} />
+                    <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>%</span>
+                    {loadingFee && <div className="spinner-border spinner-border-sm" />}
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
+                    This fee is deducted from the seller's payout when a buyer confirms delivery.
+                    For example, a 2.5% fee on a ₦100,000 sale deducts ₦2,500 (seller receives ₦97,500).
+                  </p>
+                </div>
+              </motion.div>
+
+              <motion.div variants={itemVariants} className="modern-card mt-4">
+                <div className="p-4 border-bottom d-flex align-items-center gap-3" style={{ borderBottomColor: 'var(--border-color)' }}>
+                  <div className="stat-icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning-500)' }}>
+                    <RefreshCw size={22} />
+                  </div>
+                  <div>
+                    <h3 className="h5 mb-1" style={{ color: 'var(--text-primary)' }}>Maintenance</h3>
+                    <small style={{ color: 'var(--text-tertiary)' }}>System maintenance actions</small>
+                  </div>
+                </div>
+                <div className="p-4 d-flex flex-column gap-3">
+                  <button className="btn-ghost w-100 justify-content-between text-start p-3" style={{ borderRadius: 12, background: 'var(--bg-tertiary)' }}>
+                    <span style={{ color: 'var(--text-primary)' }}>Clear System Cache</span>
+                    <small style={{ color: 'var(--text-tertiary)' }}>Run now</small>
+                  </button>
+                  <button className="btn-ghost w-100 justify-content-between text-start p-3" style={{ borderRadius: 12, background: 'var(--bg-tertiary)' }}>
+                    <span style={{ color: 'var(--text-primary)' }}>Export System Logs</span>
+                    <small style={{ color: 'var(--text-tertiary)' }}>Download</small>
+                  </button>
+                  <button className="btn-ghost w-100 justify-content-between text-start p-3" style={{ borderRadius: 12, background: 'rgba(239, 68, 68, 0.05)', color: 'var(--danger-500)' }}>
+                    <span>Run Database Cleanup</span>
+                    <small>Maintenance</small>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          </div>
+        </motion.div>
       </div>
     </Layout>
   )

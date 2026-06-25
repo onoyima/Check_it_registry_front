@@ -1,183 +1,176 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Plus, Package, DollarSign, Info, Image as ImageIcon, X, Loader2 } from 'lucide-react'
 import { Layout } from '../components/Layout'
+import { useAuth } from '../contexts/AuthContext'
 import { useToast, ToastContainer } from '../components/Toast'
-import { useNavigate } from 'react-router-dom'
-import { Upload, Smartphone, CheckCircle } from 'lucide-react'
 
-type DeviceOption = { id: string; label: string }
+type MyDevice = { id: string; brand: string; model: string; imei: string; serial: string; category: string }
+
+type FormData = { deviceId: string; title: string; description: string; price: string; condition: string; images: File[] }
 
 export default function CreateListing() {
-  const [deviceId, setDeviceId] = useState('')
-  const [title, setTitle] = useState('')
-  const [price, setPrice] = useState<number | ''>('')
-  const [condition, setCondition] = useState<'new'|'used'|'refurbished'>('used')
-  const [location, setLocation] = useState('')
-  const [description, setDescription] = useState('')
-  const [image, setImage] = useState<File | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const { toasts, removeToast, showSuccess, showError } = useToast()
-
-  const [loadingDevices, setLoadingDevices] = useState(true)
-  const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || ''
-  const API_URL = API_BASE ? `${API_BASE}/api` : (import.meta.env.VITE_API_URL || '/api')
-  const token = localStorage.getItem('auth_token')
-  const [devices, setDevices] = useState<DeviceOption[]>([])
+  const [devices, setDevices] = useState<MyDevice[]>([])
+  const [form, setForm] = useState<FormData>({ deviceId: '', title: '', description: '', price: '', condition: 'excellent', images: [] })
+  const [submitting, setSubmitting] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        setLoading(true)
+        const token = localStorage.getItem('auth_token')
+        const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/devices`, { headers: { Authorization: `Bearer ${token}` } })
+        if (res.ok) {
+          const data = await res.json()
+          setDevices(data.data || [])
+        }
+      } catch { /* ignore */ } finally { setLoading(false) }
+    }
     fetchDevices()
   }, [])
 
-  const fetchDevices = async () => {
-    try {
-      const res = await fetch(`${API_URL}/device-management`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (res.ok) {
-        const data = await res.json()
-        // Filter for verified devices only? The mocked service checked for active status.
-        // Assuming user can only list verified devices not reported stolen.
-        const validDevices = (data || []).filter((d: any) => d.status !== 'stolen' && d.status !== 'lost')
-        
-        setDevices(validDevices.map((d: any) => ({
-          id: d.id,
-          label: `${d.brand} ${d.model} (${d.imei ? 'IMEI ••' + d.imei.slice(-4) : 'Serial ' + d.serial})`
-        })))
-      }
-    } catch (err) {
-      console.error('Failed to fetch devices', err)
-    } finally {
-      setLoadingDevices(false)
-    }
+  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    setForm(p => ({ ...p, images: [...p.images, ...files].slice(0, 10) }))
   }
 
-  const valid = deviceId && title && price !== '' && location
+  const removeImage = (idx: number) => setForm(p => ({ ...p, images: p.images.filter((_, i) => i !== idx) }))
 
-  const onSubmit = async () => {
-    if (!valid) return showError('Please fill all required fields')
-    setSubmitting(true)
-    
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.title || !form.price || !form.deviceId) { showError('Title, price, and device are required'); return }
     try {
-      // In a real app, upload image first to get URL.
-      // For now, we will use a placeholder or data URI if small.
-      // But let's assume image upload is separate or handled via multipart.
-      // The current backend accepts JSON with image URLs.
-      // We'll skip image upload logic for MVP and use a placeholder or base64 if needed.
-      // Since FileUploadService exists, we should use it, but no frontend util for it yet?
-      // Just use a placeholder URL for now if image serves as verification.
-      const imageUrl = 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?q=80&w=800&auto=format&fit=crop'
+      setSubmitting(true)
+      const token = localStorage.getItem('auth_token')
+      const fd = new FormData()
+      fd.append('title', form.title)
+      fd.append('description', form.description)
+      fd.append('price', form.price)
+      fd.append('condition', form.condition)
+      fd.append('deviceId', form.deviceId)
+      form.images.forEach(img => fd.append('images', img))
 
-      const payload = {
-        device_id: deviceId,
-        title,
-        price: Number(price),
-        currency: 'NGN',
-        condition,
-        location,
-        description,
-        images: [imageUrl] // Array of strings
-      }
-
-      const res = await fetch(`${API_URL}/marketplace`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      })
-
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to create listing')
-      }
-
-      setSubmitted(true)
-      showSuccess('Listing created successfully')
-    } catch (err: any) {
-      showError('Error', err.message)
-    } finally {
-      setSubmitting(false)
-    }
+      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/marketplace/listings`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Failed to create listing') }
+      showSuccess('Listing created successfully!')
+      setForm({ deviceId: '', title: '', description: '', price: '', condition: 'excellent', images: [] })
+    } catch (err: any) { showError(err.message) } finally { setSubmitting(false) }
   }
 
   return (
-    <Layout requireAuth allowedRoles={["business"]}>
-      <div className="container py-4" style={{ maxWidth: 900 }}>
+    <Layout requireAuth>
+      <div className="container-fluid">
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="page-header">
+              <div className="d-flex align-items-center gap-3">
+                <div className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--primary-500), var(--primary-700))' }}>
+                  <Package size={24} className="text-white" />
+                </div>
+                <div>
+                  <h1>Create Listing</h1>
+                  <p>Sell a device on the marketplace</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="row justify-content-center">
+          <div className="col-lg-8">
+            <form onSubmit={handleSubmit}>
+              <div className="modern-card p-4 mb-4">
+                <h5 className="mb-4 d-flex align-items-center gap-2">
+                  <Package size={20} style={{ color: 'var(--primary-600)' }} />
+                  Device Information
+                </h5>
+                <div className="row g-3">
+                  <div className="col-12">
+                    <label className="form-label">Select Device *</label>
+                    {loading ? (
+                      <div className="modern-input d-flex align-items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                        <Loader2 size={16} className="spinner-border" /> Loading devices...
+                      </div>
+                    ) : (
+                      <select className="modern-select" value={form.deviceId} onChange={e => setForm(p => ({ ...p, deviceId: e.target.value }))} required>
+                        <option value="">Choose a registered device</option>
+                        {devices.map(d => <option key={d.id} value={d.id}>{d.brand} {d.model} ({d.imei || d.serial || d.id.slice(0, 8)})</option>)}
+                      </select>
+                    )}
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label">Listing Title *</label>
+                    <input className="modern-input" placeholder="e.g. iPhone 14 Pro Max - Like New" value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} required />
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label">Description</label>
+                    <textarea className="modern-textarea" rows={4} placeholder="Describe the device's condition, accessories, reason for selling, etc." value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Price ($) *</label>
+                    <input type="number" className="modern-input" placeholder="0.00" min="0" step="0.01" value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} required />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Condition</label>
+                    <select className="modern-select" value={form.condition} onChange={e => setForm(p => ({ ...p, condition: e.target.value }))}>
+                      <option value="excellent">Excellent</option>
+                      <option value="good">Good</option>
+                      <option value="fair">Fair</option>
+                      <option value="poor">Poor</option>
+                      <option value="parts">For Parts / Not Working</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modern-card p-4 mb-4">
+                <h5 className="mb-4 d-flex align-items-center gap-2">
+                  <ImageIcon size={20} style={{ color: 'var(--primary-600)' }} />
+                  Images (up to 10)
+                </h5>
+                <div className="d-flex flex-wrap gap-3 mb-3">
+                  {form.images.map((img, i) => (
+                    <div key={i} className="position-relative" style={{ width: 100, height: 100 }}>
+                      <img src={URL.createObjectURL(img)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
+                      <button type="button" className="btn btn-sm position-absolute top-0 end-0" style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', padding: 2 }} onClick={() => removeImage(i)}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  {form.images.length < 10 && (
+                    <label className="d-flex align-items-center justify-content-center" style={{ width: 100, height: 100, border: '2px dashed var(--border-color)', borderRadius: 8, cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                      <Plus size={24} />
+                      <input type="file" accept="image/*" multiple onChange={handleImage} style={{ display: 'none' }} />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              <div className="modern-card p-4">
+                <div className="d-flex align-items-start gap-3 mb-4">
+                  <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style={{ width: 40, height: 40, background: 'var(--primary-50)' }}>
+                    <Info size={20} style={{ color: 'var(--primary-600)' }} />
+                  </div>
+                  <div>
+                    <p className="fw-semibold mb-1">Marketplace Fee</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>A 5% transaction fee will be deducted from the final sale price.</p>
+                  </div>
+                </div>
+                <div className="d-flex justify-content-end gap-3">
+                  <button type="button" className="btn-ghost" onClick={() => window.history.back()}>Cancel</button>
+                  <button type="submit" className="btn-gradient-primary d-flex align-items-center gap-2" disabled={submitting}>
+                    {submitting ? <Loader2 size={18} className="spinner-border" /> : <Plus size={18} />}
+                    {submitting ? 'Creating...' : 'Create Listing'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        {!submitted ? (
-          <div className="modern-card p-3">
-            <div className="d-flex align-items-center justify-content-between mb-3">
-              <div>
-                <h2 className="fw-bold m-0">Create Listing</h2>
-                <p className="text-secondary m-0">Publish a device to the marketplace</p>
-              </div>
-            </div>
-
-            <div className="row g-3">
-              <div className="col-12 col-md-6">
-                <label className="form-label">Device</label>
-                <div className="input-group">
-                  <span className="input-group-text"><Smartphone size={16} /></span>
-                  <select value={deviceId} onChange={e => setDeviceId(e.target.value)} className="form-select">
-                    <option value="">Select a registered device</option>
-                    {loadingDevices ? <option disabled>Loading...</option> : devices.length === 0 ? <option disabled>No verified devices found</option> : devices.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="col-12 col-md-6">
-                <label className="form-label">Title</label>
-                <input className="form-control" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., iPhone 13 128GB" />
-              </div>
-              <div className="col-12 col-md-4">
-                <label className="form-label">Price (₦)</label>
-                <input type="number" className="form-control" value={price} onChange={e => setPrice(e.target.value === '' ? '' : Number(e.target.value))} placeholder="e.g., 750000" />
-              </div>
-              <div className="col-12 col-md-4">
-                <label className="form-label">Condition</label>
-                <select className="form-select" value={condition} onChange={e => setCondition(e.target.value as any)}>
-                  <option value="new">New</option>
-                  <option value="used">Used</option>
-                  <option value="refurbished">Refurbished</option>
-                </select>
-              </div>
-              <div className="col-12 col-md-4">
-                <label className="form-label">Location</label>
-                <input className="form-control" value={location} onChange={e => setLocation(e.target.value)} placeholder="City" />
-              </div>
-              <div className="col-12">
-                <label className="form-label">Description</label>
-                <textarea className="form-control" rows={4} value={description} onChange={e => setDescription(e.target.value)} placeholder="Condition, accessories, meet-up details" />
-              </div>
-              <div className="col-12">
-                <label className="form-label">Image</label>
-                <div className="input-group">
-                  <span className="input-group-text"><Upload size={16} /></span>
-                  <input type="file" accept="image/*" className="form-control" onChange={e => setImage(e.target.files?.[0] || null)} />
-                </div>
-                {image && <small className="text-secondary">Selected: {image.name}</small>}
-              </div>
-            </div>
-
-            <div className="d-flex justify-content-end gap-2 mt-3">
-              <button className="btn btn-outline-secondary" onClick={() => navigate('/business')}>Cancel</button>
-              <button className="btn btn-gradient-primary" disabled={!valid || submitting} onClick={onSubmit}>{submitting ? 'Publishing...' : 'Publish Listing'}</button>
-            </div>
-          </div>
-        ) : (
-          <div className="modern-card p-4 text-center">
-            <div className="d-flex flex-column align-items-center gap-2">
-              <CheckCircle size={28} style={{ color: 'var(--primary-600)' }} />
-              <h5 className="m-0">Listing Published</h5>
-              <p className="text-secondary">Your listing is now live on the marketplace.</p>
-              <div className="d-flex gap-2">
-                <button className="btn btn-outline-primary" onClick={() => navigate('/marketplace/browse')}>View Marketplace</button>
-                <button className="btn btn-outline-secondary" onClick={() => navigate('/business/my-listings')}>Go to My Listings</button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </Layout>
   )

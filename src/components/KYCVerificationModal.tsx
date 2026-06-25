@@ -218,6 +218,19 @@ export default function KYCVerificationModal({ isOpen, onClose, onSuccess }: KYC
                   <p className="text-muted mb-4 mx-auto" style={{ maxWidth: '400px' }}>
                     To ensure the security of the registry, we need to verify your identity using your National Identity Number (NIN).
                   </p>
+
+                  {!(user as any)?.profile_image_url && (
+                    <div className="mx-auto mb-4 p-3 rounded-3 d-flex align-items-center gap-3 text-start"
+                      style={{ maxWidth: '400px', background: '#fffbeb', border: '1px solid #fde68a' }}>
+                      <Camera size={24} style={{ color: '#d97706', flexShrink: 0 }} />
+                      <div>
+                        <strong style={{ color: '#92400e', fontSize: 14 }}>Upload a Profile Photo First</strong>
+                        <p style={{ color: '#b45309', fontSize: 13, margin: '2px 0 0' }}>
+                          Please upload a profile photo in your account settings before starting verification.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="d-flex flex-column gap-3 mb-5 mx-auto text-start" style={{ maxWidth: '350px' }}>
                     <div className="d-flex gap-3 align-items-center">
@@ -240,8 +253,9 @@ export default function KYCVerificationModal({ isOpen, onClose, onSuccess }: KYC
                     onClick={() => setStep('nin_input')}
                     className="btn btn-primary btn-lg px-5 rounded-pill w-100" 
                     style={{ maxWidth: '350px' }}
+                    disabled={!(user as any)?.profile_image_url}
                   >
-                    Start Verification
+                    {!(user as any)?.profile_image_url ? 'Upload Profile Photo First' : 'Start Verification'}
                   </button>
                   <div className="mt-3">
                     <small className="text-muted">By continuing, you agree to our Terms of Service</small>

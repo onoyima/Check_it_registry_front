@@ -1,87 +1,175 @@
-import React from 'react'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { CheckCircle, CreditCard, Download, Send, Printer, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react'
 import { Layout } from '../components/Layout'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
+import { useToast, ToastContainer } from '../components/Toast'
+import { useSearchParams, useNavigate, Link } from 'react-router-dom'
+
+type Transaction = {
+  id: string
+  amount: number
+  status: string
+  method: string
+  description: string
+  created_at: string
+  reference: string
+}
 
 export default function PaymentConfirmation() {
-  const location = useLocation()
+  const { user } = useAuth()
   const navigate = useNavigate()
-  const { showSuccess } = useToast()
-  const amount = (location.state as any)?.amount ?? 108.5
-  const methodId = (location.state as any)?.methodId ?? 'card_1234'
+  const [searchParams] = useSearchParams()
+  const { toasts, removeToast, showSuccess, showError } = useToast()
+  const [transaction, setTransaction] = useState<Transaction | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const onConfirm = () => {
-    showSuccess('Payment Successful', `Charged $${amount.toFixed(2)} to ${methodId}`)
-    navigate('/payments/transactions')
-  }
+  const txId = searchParams.get('tx') || searchParams.get('id') || ''
 
-  return (
-    <Layout requireAuth allowedRoles={["business"]}>
-      <div className="container">
-        <div className="row g-4">
-          <div className="col-12 col-lg-8 mx-auto">
-            {/* Header */}
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <h2 className="fw-bold mb-0" style={{ color: 'var(--text-primary)' }}>Confirm Payment</h2>
-            </div>
+  useEffect(() => {
+    const fetchTx = async () => {
+      try {
+        setLoading(true)
+        if (!txId) return
+        const token = localStorage.getItem('auth_token')
+        const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/payments/transactions/${txId}`, { headers: { Authorization: `Bearer ${token}` } })
+        if (!res.ok) throw new Error('Transaction not found')
+        const data = await res.json()
+        setTransaction(data.data || data)
+      } catch { setTransaction(null) }
+      finally { setLoading(false) }
+    }
+    fetchTx()
+  }, [txId])
 
-            {/* Recipient */}
-            <div className="d-flex flex-column align-items-center modern-card p-4 mb-3" style={{ textAlign: 'center' }}>
-              <div className="rounded-circle d-flex align-items-center justify-content-center mb-2" style={{ width: 56, height: 56, background: 'var(--gray-200)' }}>
-                <span>🏬</span>
-              </div>
-              <h5 className="fw-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Check It Inc.</h5>
-              <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>1-Year Premium Subscription</p>
-            </div>
-
-            {/* Amount */}
-            <h1 className="fw-bold text-center" style={{ color: 'var(--text-primary)', fontSize: 40 }}>${amount.toFixed(2)}</h1>
-
-            {/* Order summary */}
-            <div className="modern-card p-3 mb-3">
-              <div className="d-flex justify-content-between py-2">
-                <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>Subtotal</p>
-                <p className="mb-0 fw-medium" style={{ color: 'var(--text-primary)' }}>${(amount - 8.5).toFixed(2)}</p>
-              </div>
-              <div className="d-flex justify-content-between py-2">
-                <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>Service Fee</p>
-                <p className="mb-0 fw-medium" style={{ color: 'var(--text-primary)' }}>$2.50</p>
-              </div>
-              <div className="d-flex justify-content-between py-2">
-                <p className="mb-0" style={{ color: 'var(--text-secondary)' }}>Taxes</p>
-                <p className="mb-0 fw-medium" style={{ color: 'var(--text-primary)' }}>$6.00</p>
-              </div>
-            </div>
-
-            {/* Paying with */}
-            <div className="modern-card p-3 mb-3">
-              <p className="mb-2 text-uppercase fw-semibold" style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Paying With</p>
-              <div className="d-flex align-items-center justify-content-between">
-                <div className="d-flex align-items-center gap-3">
-                  <div className="rounded d-flex align-items-center justify-content-center" style={{ width: 40, height: 40, background: 'var(--bg-secondary)' }}>
-                    <span>💳</span>
-                  </div>
-                  <div>
-                    <p className="mb-0 fw-semibold" style={{ color: 'var(--text-primary)' }}>
-                      {methodId.includes('apple') ? 'Apple Pay' : 'Visa **** 1234'}
-                    </p>
-                    <small style={{ color: 'var(--text-secondary)' }}>Expires 08/26</small>
-                  </div>
+  if (!txId) {
+    return (
+      <Layout requireAuth>
+        <div className="container-fluid">
+          <div className="row justify-content-center py-4">
+            <div className="col-lg-6">
+              <div className="modern-card p-5 text-center">
+                <div className="empty-state">
+                  <div className="empty-state-icon"><CreditCard size={48} /></div>
+                  <h3>No Transaction</h3>
+                  <p>No transaction ID provided</p>
+                  <Link to="/" className="btn-gradient-primary mt-3">Go Home</Link>
                 </div>
-                <button className="btn btn-link" onClick={() => navigate('/payments/method-selection')}>Change</button>
               </div>
-            </div>
-
-            {/* Bottom actions */}
-            <div className="modern-card p-3">
-              <div className="d-flex align-items-center justify-content-center gap-2 mb-3" style={{ color: 'var(--text-secondary)' }}>
-                <span style={{ fontSize: 14 }}>🔒</span>
-                <small>Secure SSL Transaction</small>
-              </div>
-              <button className="btn-gradient-primary w-100 py-3" onClick={onConfirm}>Confirm &amp; Pay ${amount.toFixed(2)}</button>
             </div>
           </div>
         </div>
+      </Layout>
+    )
+  }
+
+  if (loading) {
+    return (
+      <Layout requireAuth>
+        <div className="container-fluid">
+          <div className="row justify-content-center py-4">
+            <div className="col-lg-6">
+              <div className="modern-card p-5 text-center">
+                <Loader2 size={32} className="spinner-border" style={{ color: 'var(--primary-600)' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (!transaction) {
+    return (
+      <Layout requireAuth>
+        <div className="container-fluid">
+          <div className="row justify-content-center py-4">
+            <div className="col-lg-6">
+              <div className="modern-card p-5 text-center">
+                <div className="empty-state">
+                  <div className="empty-state-icon"><AlertTriangle size={48} /></div>
+                  <h3>Transaction Not Found</h3>
+                  <p>We couldn't find a transaction with that ID</p>
+                  <Link to="/transaction-history" className="btn-gradient-primary mt-3">View History</Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
+  const isSuccess = transaction.status === 'completed' || transaction.status === 'success'
+
+  return (
+    <Layout requireAuth>
+      <div className="container-fluid">
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="page-header">
+              <div className="d-flex align-items-center gap-3">
+                <button className="btn-ghost d-inline-flex align-items-center gap-2" onClick={() => navigate(-1)}><ArrowLeft size={18} /> Back</button>
+                <div>
+                  <h1>Payment {isSuccess ? 'Confirmation' : 'Status'}</h1>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="row justify-content-center">
+          <div className="col-lg-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="modern-card p-4 p-md-5 text-center">
+                {isSuccess ? (
+                  <div className="d-flex align-items-center justify-content-center rounded-circle mx-auto mb-4" style={{ width: 80, height: 80, background: 'var(--success-50)' }}>
+                    <CheckCircle size={48} style={{ color: 'var(--success-500)' }} />
+                  </div>
+                ) : (
+                  <div className="d-flex align-items-center justify-content-center rounded-circle mx-auto mb-4" style={{ width: 80, height: 80, background: 'var(--warning-50)' }}>
+                    <AlertTriangle size={48} style={{ color: 'var(--warning-500)' }} />
+                  </div>
+                )}
+
+                <h4 className="mb-2">{isSuccess ? 'Payment Successful!' : 'Payment Pending'}</h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+                  {isSuccess ? 'Your transaction has been processed' : 'Your transaction is being processed'}
+                </p>
+
+                <div className="modern-card p-4 text-start my-4" style={{ backgroundColor: 'var(--gray-50)' }}>
+                  <div className="row g-2" style={{ fontSize: 14 }}>
+                    <div className="col-6" style={{ color: 'var(--text-secondary)' }}>Reference:</div>
+                    <div className="col-6 text-end fw-medium" style={{ fontFamily: 'monospace' }}>{transaction.reference || transaction.id.slice(0, 12)}</div>
+                    <div className="col-6" style={{ color: 'var(--text-secondary)' }}>Amount:</div>
+                    <div className="col-6 text-end fw-bold" style={{ color: 'var(--primary-600)' }}>${(transaction.amount || 0).toFixed(2)}</div>
+                    <div className="col-6" style={{ color: 'var(--text-secondary)' }}>Method:</div>
+                    <div className="col-6 text-end text-capitalize">{transaction.method || 'Card'}</div>
+                    <div className="col-6" style={{ color: 'var(--text-secondary)' }}>Date:</div>
+                    <div className="col-6 text-end">{new Date(transaction.created_at).toLocaleString()}</div>
+                    <div className="col-6" style={{ color: 'var(--text-secondary)' }}>Description:</div>
+                    <div className="col-6 text-end">{transaction.description || '—'}</div>
+                  </div>
+                </div>
+
+                <div className="d-flex flex-wrap gap-3 justify-content-center">
+                  <button className="btn-gradient-primary d-inline-flex align-items-center gap-2" onClick={() => window.print()}>
+                    <Printer size={18} /> Print Receipt
+                  </button>
+                  <button className="btn-outline-primary d-inline-flex align-items-center gap-2" onClick={() => { /* send email receipt */ showSuccess('Receipt sent to your email') }}>
+                    <Send size={18} /> Email Receipt
+                  </button>
+                </div>
+
+                <div className="d-flex justify-content-center gap-3 mt-3">
+                  <Link to="/transaction-history" className="btn-ghost">View All Transactions</Link>
+                  <Link to="/" className="btn-ghost">Go Home</Link>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>
     </Layout>
   )

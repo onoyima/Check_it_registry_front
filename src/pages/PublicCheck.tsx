@@ -1,536 +1,221 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Search, 
-  Smartphone, 
-  Barcode, 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
-  HelpCircle,
-  UserPlus,
-  FileText,
-  Calendar,
-  Info,
-  Lightbulb,
-  Eye,
-  Handshake
-} from 'lucide-react'
-import { CheckResult } from '../types/database'
-import { supabase } from '../lib/supabase'
-import { buildCheckHeaders } from '../lib/clientContext'
-import { useToast, ToastContainer } from '../components/Toast'
+import { useState, useRef } from 'react'
+import { motion } from 'framer-motion'
+import { Search, Smartphone, Shield, AlertTriangle, CheckCircle, Loader2, MapPin, Copy, ExternalLink } from 'lucide-react'
 import Navbar from '../components/Navbar'
 
-interface PublicCheckProps {
-  user?: any
-  onLogout?: () => void
+type CheckResult = {
+  status: string
+  brand?: string
+  model?: string
+  imei?: string
+  serial?: string
+  reported?: boolean
+  reportType?: string
+  riskScore?: number
+  latitude?: number
+  longitude?: number
+  locationAccuracy?: number
 }
 
-export default function PublicCheck({ user, onLogout }: PublicCheckProps = {}) {
-  const [imei, setImei] = useState('')
-  const [serial, setSerial] = useState('')
+const GoogleMapPin: React.FC<{ lat: number; lon: number; accuracy?: number }> = ({ lat, lon, accuracy }) => {
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return (
+      <a href={`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`} target="_blank" rel="noreferrer" className="btn-ghost d-inline-flex align-items-center gap-2">
+        <ExternalLink size={16} /> Open in Google Maps
+      </a>
+    )
+  }
+  return (
+    <iframe
+      title="Location"
+      src={`https://www.google.com/maps?q=${lat},${lon}&z=15&output=embed`}
+      width="100%" height="220"
+      style={{ border: 0, borderRadius: 8 }}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
+export default function PublicCheck() {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [query, setQuery] = useState('')
   const [result, setResult] = useState<CheckResult | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const { toasts, removeToast, showSuccess, showError, showWarning } = useToast()
+  const [searched, setSearched] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const validateInput = () => {
-    if (!imei.trim() && !serial.trim()) {
-      setError('Please enter either an IMEI or serial number')
-      return false
-    }
-
-    if (imei && imei.length < 10) {
-      setError('IMEI must be at least 10 digits')
-      return false
-    }
-
-    if (serial && serial.length < 3) {
-      setError('Serial number must be at least 3 characters')
-      return false
-    }
-
-    return true
-  }
-
-  const handleCheck = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setResult(null)
-
-    if (!validateInput()) {
-      setLoading(false)
-      return
-    }
-
+  const handleCheck = async () => {
+    const q = query.trim()
+    if (!q) return
     try {
-      const headers = await buildCheckHeaders()
-      const query = imei.trim() ? { imei: imei.trim() } : { serial: serial.trim() }
-      const data = await supabase.publicCheck(query, headers)
-      
-      setResult(data)
-
-      // Show appropriate toast based on result
-      if (data.status === 'clean') {
-        showSuccess('Device is Clean', 'This device has no active reports')
-      } else if (data.status === 'not_found') {
-        showWarning('Device Not Found', 'This device is not registered in our system')
-      } else if (data.status === 'stolen' || data.status === 'lost') {
-        showError('Device Alert!', `This device has been reported as ${data.status}`)
-      }
-    } catch (err) {
-      console.error('Check error:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to check device status'
-      setError(errorMessage)
-      showError('Check Failed', errorMessage)
-    } finally {
-      setLoading(false)
-    }
+      setLoading(true); setError(null); setResult(null); setSearched(false)
+      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/devices/check?q=${encodeURIComponent(q)}`)
+      if (!res.ok) throw new Error('Device not found in registry')
+      const data = await res.json()
+      setResult(data.data || data)
+    } catch (err: any) { setError(err.message || 'Lookup failed') }
+    finally { setLoading(false); setSearched(true) }
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'clean': return { icon: CheckCircle, color: 'text-success' }
-      case 'not_found': return { icon: HelpCircle, color: 'text-warning' }
-      case 'stolen': return { icon: AlertTriangle, color: 'text-danger' }
-      case 'lost': return { icon: Search, color: 'text-warning' }
-      default: return { icon: Info, color: 'text-info' }
-    }
+  const statusDisplay = (s?: string) => {
+    const st = (s || '').toLowerCase()
+    if (['clean', 'verified', 'clear'].includes(st)) return { label: 'No Reports Found', color: 'var(--success-500)', icon: CheckCircle, badge: 'status-verified' }
+    if (st === 'stolen') return { label: 'Reported Stolen', color: 'var(--danger-500)', icon: AlertTriangle, badge: 'status-stolen' }
+    if (st === 'lost') return { label: 'Reported Lost', color: 'var(--warning-500)', icon: AlertTriangle, badge: 'status-unverified' }
+    return { label: 'Unknown Status', color: 'var(--text-secondary)', icon: Shield, badge: 'status-found' }
   }
 
-  const getStatusAlert = (status: string) => {
-    switch (status) {
-      case 'clean': return 'alert-success'
-      case 'not_found': return 'alert-warning'
-      case 'stolen': return 'alert-danger'
-      case 'lost': return 'alert-warning'
-      default: return 'alert-info'
-    }
-  }
+  const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter') handleCheck() }
 
   return (
-    <div className="min-vh-100" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-      <Navbar user={user} onLogout={onLogout || (() => {})} />
-
-      {/* Animated Hero Section */}
-      <div className="container-fluid py-5">
-        <motion.div 
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center text-white mb-5"
-        >
-          <motion.div 
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-            className="d-inline-flex align-items-center justify-content-center mb-4 float"
-            style={{ 
-              width: '120px', 
-              height: '120px',
-              background: 'rgba(255, 255, 255, 0.2)',
-              borderRadius: '30px',
-              backdropFilter: 'blur(20px)'
-            }}
-          >
-            <Search size={60} className="text-white" />
-          </motion.div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="display-3 fw-bold mb-4"
-          >
-            Check Device Status
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="lead text-white text-opacity-90 mx-auto"
-            style={{ maxWidth: '600px' }}
-          >
-            Verify if a device has been reported as stolen or lost before making a purchase. 
-            Protect yourself from buying stolen goods.
-          </motion.p>
-        </motion.div>
-
-        {/* Modern Check Form */}
-        <div className="row justify-content-center">
-          <div className="col-11 col-md-10 col-lg-8 col-xl-6">
-            <motion.div 
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7, duration: 0.6 }}
-              className="glass-card p-4 p-md-5 mb-5"
-            >
-              <form onSubmit={handleCheck}>
-                <div className="row g-4">
-                  {/* IMEI Field */}
-                  <motion.div 
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.8 }}
-                    className="col-md-6"
-                  >
-                    <label htmlFor="imei" className="form-label text-white fw-semibold">
-                      <Smartphone size={16} className="me-2" />
-                      IMEI Number
-                    </label>
-                    <div className="position-relative">
-                      <input
-                        id="imei"
-                        type="text"
-                        className="modern-input"
-                        placeholder="e.g., 123456789012345"
-                        value={imei}
-                        onChange={(e) => {
-                          setImei(e.target.value)
-                          if (e.target.value) setSerial('')
-                        }}
-                      />
-                      <div className="position-absolute top-50 end-0 translate-middle-y pe-3">
-                        <Smartphone size={18} className="text-muted" />
-                      </div>
-                    </div>
-                    <small className="text-white text-opacity-75">
-                      Usually found in Settings → About Phone
-                    </small>
-                  </motion.div>
-
-                  {/* Serial Field */}
-                  <motion.div 
-                    initial={{ opacity: 0, x: 30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.9 }}
-                    className="col-md-6"
-                  >
-                    <label htmlFor="serial" className="form-label text-white fw-semibold">
-                      <Barcode size={16} className="me-2" />
-                      Serial Number
-                    </label>
-                    <div className="position-relative">
-                      <input
-                        id="serial"
-                        type="text"
-                        className="modern-input"
-                        placeholder="e.g., ABC123456789"
-                        value={serial}
-                        onChange={(e) => {
-                          setSerial(e.target.value)
-                          if (e.target.value) setImei('')
-                        }}
-                      />
-                      <div className="position-absolute top-50 end-0 translate-middle-y pe-3">
-                        <Barcode size={18} className="text-muted" />
-                      </div>
-                    </div>
-                    <small className="text-white text-opacity-75">
-                      Alternative identifier for the device
-                    </small>
-                  </motion.div>
-                </div>
-
-                {/* Info Badge */}
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1.0 }}
-                  className="text-center my-4"
-                >
-                  <span className="badge bg-white bg-opacity-20 text-white px-3 py-2">
-                    <Info size={14} className="me-2" />
-                    Enter either IMEI or Serial Number (not both)
-                  </span>
-                </motion.div>
-
-                {/* Error Alert */}
-                <AnimatePresence>
-                  {error && (
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      className="alert alert-danger d-flex align-items-center mb-4"
-                    >
-                      <AlertTriangle size={18} className="me-2" />
-                      <span>{error}</span>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Check Button */}
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.1 }}
-                  className="d-grid"
-                >
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    type="submit"
-                    disabled={loading || (!imei && !serial)}
-                    className="btn btn-light btn-lg fw-semibold"
-                  >
-                    {loading ? (
-                      <div className="d-flex align-items-center justify-content-center">
-                        <div className="spinner-border spinner-border-sm me-2" role="status">
-                          <span className="visually-hidden">Loading...</span>
-                        </div>
-                        Checking device...
-                      </div>
-                    ) : (
-                      <div className="d-flex align-items-center justify-content-center">
-                        <Search size={18} className="me-2" />
-                        Check Device Status
-                      </div>
-                    )}
-                  </motion.button>
-                </motion.div>
-              </form>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Animated Results */}
-        <AnimatePresence>
-          {result && (
-            <div className="row justify-content-center">
-              <div className="col-11 col-md-10 col-lg-8 col-xl-6">
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: -30 }}
-                  transition={{ duration: 0.5 }}
-                  className={`alert ${getStatusAlert(result.status)} border-0 shadow-lg mb-5`}
-                >
-                  <div className="d-flex align-items-start">
-                    <div className="flex-shrink-0 me-3">
-                      {(() => {
-                        const { icon: StatusIcon, color } = getStatusIcon(result.status);
-                        return <StatusIcon size={32} className={color} />;
-                      })()}
-                    </div>
-                    <div className="flex-grow-1">
-                      <h4 className="alert-heading fw-bold mb-3">
-                        {result.status === 'clean' && (
-                          <span className="d-flex align-items-center">
-                            <CheckCircle size={24} className="me-2" />
-                            Device Status: Clean
-                          </span>
-                        )}
-                        {result.status === 'not_found' && (
-                          <span className="d-flex align-items-center">
-                            <HelpCircle size={24} className="me-2" />
-                            Device Not Found
-                          </span>
-                        )}
-                        {result.status === 'stolen' && (
-                          <span className="d-flex align-items-center">
-                            <AlertTriangle size={24} className="me-2" />
-                            WARNING: Device Reported Stolen
-                          </span>
-                        )}
-                        {result.status === 'lost' && (
-                          <span className="d-flex align-items-center">
-                            <Search size={24} className="me-2" />
-                            WARNING: Device Reported Lost
-                          </span>
-                        )}
-                      </h4>
-                      <p className="mb-4">{result.message}</p>
-
-                      {/* Case Details */}
-                      <div className="row g-3 mb-3">
-                        {result.case_id && (
-                          <div className="col-md-6">
-                            <div className="bg-white bg-opacity-50 rounded-3 p-3">
-                              <div className="d-flex align-items-center">
-                                <FileText size={18} className="me-2" />
-                                <div>
-                                  <small className="text-muted d-block">Case ID</small>
-                                  <strong>{result.case_id}</strong>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {result.occurred_at && (
-                          <div className="col-md-6">
-                            <div className="bg-white bg-opacity-50 rounded-3 p-3">
-                              <div className="d-flex align-items-center">
-                                <Calendar size={18} className="me-2" />
-                                <div>
-                                  <small className="text-muted d-block">Reported</small>
-                                  <strong>{new Date(result.occurred_at).toLocaleDateString()}</strong>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Recovery Instructions */}
-                      {result.recovery_instructions && (
-                        <div className="bg-dark text-white rounded-3 p-4 mb-3">
-                          <h6 className="fw-bold mb-2 d-flex align-items-center">
-                            <Info size={18} className="me-2" />
-                            Recovery Instructions
-                          </h6>
-                          <p className="mb-0 small">{result.recovery_instructions}</p>
-                        </div>
-                      )}
-
-                      {/* Risk Warning for non-owners when stolen/lost */}
-                      {(result.status === 'stolen' || result.status === 'lost') && (
-                        <div className="rounded-3 p-4 mb-3" style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
-                          <div className="d-flex align-items-start gap-2">
-                            <AlertTriangle size={18} className="me-1" style={{ color: 'var(--danger-600)' }} />
-                            <div>
-                              <p className="mb-2 fw-semibold" style={{ color: 'var(--danger-700)' }}>Risk Warning</p>
-                              <p className="mb-0" style={{ color: 'var(--danger-700)', fontSize: 14 }}>
-                                If you are not the device owner, checking or attempting to purchase a device reported as {result.status} may put you at legal risk. 
-                                Do not proceed with purchase. Consider contacting local authorities.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Action Buttons */}
-                      {result.status === 'not_found' && (
-                        <div className="d-flex gap-2 flex-wrap">
-                          <Link to="/register" className="btn btn-primary">
-                            <Shield size={16} className="me-2" />
-                            Register Your Device
-                          </Link>
-                          <Link to="/help" className="btn btn-outline-primary">
-                            <HelpCircle size={16} className="me-2" />
-                            Learn More
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-          )}
-        </AnimatePresence>
-
-        {/* How It Works Section */}
-        <div className="row justify-content-center">
-          <div className="col-11 col-lg-10">
-            <motion.div 
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.2, duration: 0.6 }}
-              className="glass-card p-4 p-md-5"
-            >
+    <>
+      <Navbar />
+      <div className="container-fluid">
+        <div className="row justify-content-center py-5">
+          <div className="col-lg-8">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <div className="text-center mb-5">
-                <motion.div 
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 1.4, type: "spring" }}
-                  className="d-inline-flex align-items-center justify-content-center mb-3"
-                  style={{ 
-                    width: '60px', 
-                    height: '60px',
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    borderRadius: '15px'
-                  }}
-                >
-                  <Lightbulb size={30} className="text-white" />
-                </motion.div>
-                <h2 className="h3 fw-bold text-white mb-3">How It Works</h2>
-                <p className="text-white text-opacity-75">
-                  Our simple 4-step process to protect your devices
+                <div className="d-flex align-items-center justify-content-center rounded-circle mx-auto mb-3" style={{ width: 72, height: 72, background: 'linear-gradient(135deg, var(--primary-500), var(--primary-700))' }}>
+                  <Shield size={36} className="text-white" />
+                </div>
+                <h1>Public Device Check</h1>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 15, maxWidth: 500, margin: '0 auto' }}>
+                  Check if a device has been reported as stolen or lost before buying.
                 </p>
               </div>
 
-              <div className="row g-4">
-                {[
-                  {
-                    icon: UserPlus,
-                    title: "1. Register",
-                    description: "Device owners register their devices with proof of ownership",
-                    color: "bg-primary",
-                    delay: 1.5
-                  },
-                  {
-                    icon: AlertTriangle,
-                    title: "2. Report",
-                    description: "If stolen or lost, owners report it immediately to our system",
-                    color: "bg-danger",
-                    delay: 1.6
-                  },
-                  {
-                    icon: Eye,
-                    title: "3. Check",
-                    description: "Anyone can check a device's status before purchasing",
-                    color: "bg-info",
-                    delay: 1.7
-                  },
-                  {
-                    icon: Handshake,
-                    title: "4. Recover",
-                    description: "Found devices can be reported to help reunite with owners",
-                    color: "bg-success",
-                    delay: 1.8
-                  }
-                ].map((step, index) => (
-                  <div key={index} className="col-md-6 col-lg-3">
-                    <motion.div 
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: step.delay }}
-                      className="text-center h-100"
-                    >
-                      <motion.div 
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        className={`${step.color} bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3`}
-                        style={{ width: '80px', height: '80px' }}
-                      >
-                        <step.icon size={32} className="text-white" />
-                      </motion.div>
-                      <h5 className="fw-bold text-white mb-3">{step.title}</h5>
-                      <p className="text-white text-opacity-75 small">
-                        {step.description}
-                      </p>
-                    </motion.div>
+              <div className="modern-card p-4 p-md-5 mb-4">
+                <div className="d-flex gap-2">
+                  <div className="d-flex align-items-center gap-2 flex-grow-1 modern-input" style={{ padding: '0 16px' }}>
+                    <Search size={20} style={{ color: 'var(--text-secondary)' }} />
+                    <input ref={inputRef} type="text" className="flex-grow-1" style={{ border: 'none', outline: 'none', background: 'transparent', padding: '14px 0', fontSize: 16 }} placeholder="Enter IMEI, serial number, or device model..." value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleKeyDown} />
                   </div>
-                ))}
+                  <button className="btn-gradient-primary px-4" disabled={loading || !query.trim()} onClick={handleCheck}>
+                    {loading ? <Loader2 size={20} className="spinner-border" /> : 'Check'}
+                  </button>
+                </div>
+                <p className="mt-2" style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                  This check is free and anonymous. No account required.
+                </p>
               </div>
 
-              {/* Call to Action */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.9 }}
-                className="text-center mt-5"
-              >
-                <div className="d-flex justify-content-center gap-3 flex-wrap">
-                  <Link to="/register" className="btn btn-light btn-lg">
-                    <Shield size={18} className="me-2" />
-                    Register Your Device
-                  </Link>
-                  <Link to="/help" className="btn btn-outline-light btn-lg">
-                    <HelpCircle size={18} className="me-2" />
-                    Learn More
-                  </Link>
+              {loading && (
+                <div className="modern-card p-5 text-center">
+                  <Loader2 size={32} className="spinner-border" style={{ color: 'var(--primary-600)' }} />
+                  <p className="mt-3" style={{ color: 'var(--text-secondary)' }}>Looking up device...</p>
                 </div>
-              </motion.div>
+              )}
+
+              {error && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="modern-card p-4">
+                  <div className="alert-banner alert-banner-warning d-flex align-items-center gap-2">
+                    <AlertTriangle size={20} />
+                    <span>{error}</span>
+                  </div>
+                </motion.div>
+              )}
+
+              {result && !loading && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                  <div className="modern-card p-4 mb-4">
+                    <div className="d-flex align-items-center gap-3 mb-4">
+                      <div className="avatar avatar-lg" style={{ background: 'var(--primary-50)' }}>
+                        <Smartphone size={24} style={{ color: 'var(--primary-600)' }} />
+                      </div>
+                      <div>
+                        <h4 className="mb-1">{result.brand || 'Device'} {result.model || ''}</h4>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                          {result.imei && <>IMEI: {result.imei}</>}
+                          {result.serial && <> &middot; Serial: {result.serial}</>}
+                        </p>
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const sd = statusDisplay(result.status)
+                      const Icon = sd.icon
+                      return (
+                        <div className="p-4 rounded-3 text-center" style={{ backgroundColor: sd.color === 'var(--success-500)' ? 'var(--success-50)' : sd.color === 'var(--danger-500)' ? 'var(--danger-50)' : 'var(--gray-50)' }}>
+                          <Icon size={40} style={{ color: sd.color }} />
+                          <h5 className="mt-2 mb-0" style={{ color: sd.color }}>{sd.label}</h5>
+                          {result.reported && <p style={{ fontSize: 13, color: 'var(--text-secondary)' }} className="mt-1">Type: {result.reportType || 'Stolen'}</p>}
+                        </div>
+                      )
+                    })()}
+                  </div>
+
+                  <div className="row g-4">
+                    <div className="col-12 col-md-6">
+                      <div className="modern-card p-4">
+                        <div className="d-flex align-items-center gap-2 mb-3">
+                          <Shield size={18} style={{ color: 'var(--primary-600)' }} />
+                          <span className="fw-semibold">Risk Score</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-2" style={{ width: 80, height: 80, background: 'conic-gradient(var(--success-500) 0deg 360deg, var(--gray-200) 360deg)' }}>
+                            <div className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: 56, height: 56, backgroundColor: 'var(--bg-primary)' }}>
+                              <span className="h4 mb-0 fw-bold" style={{ color: 'var(--success-500)' }}>{result.riskScore ?? 0}</span>
+                            </div>
+                          </div>
+                          <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Low Risk</p>
+                        </div>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: 12 }} className="text-center mb-0">
+                          No reported incidents for this device.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <div className="modern-card p-4">
+                        <div className="d-flex align-items-center gap-2 mb-3">
+                          <MapPin size={18} style={{ color: 'var(--danger-500)' }} />
+                          <span className="fw-semibold">Last Known Location</span>
+                        </div>
+                        {result.latitude && result.longitude ? (
+                          <>
+                            <GoogleMapPin lat={result.latitude} lon={result.longitude} accuracy={result.locationAccuracy} />
+                            <p className="mt-2 mb-0" style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                              {result.latitude.toFixed(6)}, {result.longitude.toFixed(6)}
+                            </p>
+                          </>
+                        ) : (
+                          <div className="d-flex align-items-center justify-content-center py-4" style={{ color: 'var(--text-secondary)' }}>
+                            <MapPin size={24} className="me-2" />
+                            No location data
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modern-card p-3 mt-4">
+                    <div className="d-flex flex-wrap gap-3 justify-content-center">
+                      <button className="btn-ghost d-inline-flex align-items-center gap-2" onClick={() => { navigator.clipboard?.writeText(query); (window as any).__toast?.showSuccess?.('Copied!') }}>
+                        <Copy size={16} /> Copy Query
+                      </button>
+                      <button className="btn-outline-primary d-inline-flex align-items-center gap-2" onClick={() => { setQuery(''); setResult(null); setSearched(false); setError(null); inputRef.current?.focus() }}>
+                        <Search size={16} /> Check Another
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {searched && !result && !error && !loading && (
+                <div className="modern-card p-5 text-center">
+                  <div className="empty-state">
+                    <div className="empty-state-icon"><Search size={48} /></div>
+                    <h3>No Results</h3>
+                    <p>No device found matching your search. Try a different IMEI or serial number.</p>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>
       </div>
-
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
-    </div>
+    </>
   )
 }

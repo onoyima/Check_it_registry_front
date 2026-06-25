@@ -21,6 +21,7 @@ import BusinessDashboard from './pages/BusinessDashboard'
 import BuyerOrders from './pages/BuyerOrders'
 import SellerOrders from './pages/SellerOrders'
 import BusinessPayouts from './pages/BusinessPayouts'
+import SellerPayoutSettings from './pages/SellerPayoutSettings'
 import AdminDeviceCategories from './pages/AdminDeviceCategories'
 import ErrorBoundary from './components/ErrorBoundary'
 import AdminDeviceManagement from './pages/AdminDeviceManagement'
@@ -40,6 +41,7 @@ import LEASettings from './pages/LEASettings'
 import PaymentAddMethod from './pages/PaymentAddMethod'
 import PaymentMethodSelection from './pages/PaymentMethodSelection'
 import PaymentConfirmation from './pages/PaymentConfirmation'
+import PaymentCallback from './pages/PaymentCallback'
 import TransactionHistory from './pages/TransactionHistory'
 import Search from './pages/Search'
 import DeviceVerificationStatus from './pages/DeviceVerificationStatus'
@@ -54,6 +56,7 @@ import DeviceTransfer from './pages/DeviceTransfer'
 import FoundDevice from './pages/FoundDevice'
 import EmailVerification from './pages/EmailVerification'
 import PasswordReset from './pages/PasswordReset'
+import ForgotPassword from './pages/ForgotPassword'
 import VerifyDevice from './pages/VerifyDevice'
 import UserManagement from './pages/UserManagement'
 import Analytics from './pages/Analytics'
@@ -67,11 +70,14 @@ import Profile from './pages/Profile'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Settings from './pages/Settings'
 import Checkout from './pages/Checkout'
+import Cart from './pages/Cart'
+import { CartProvider } from './contexts/CartContext'
 import './App.css'
 import { ToastProvider } from './components/Toast'
 import NotFound from './pages/NotFound'
 import AdminMarketplaceManagement from './pages/AdminMarketplaceManagement'
 import CustomCursor from './components/CustomCursor'
+import ProtectedRoute from './components/ProtectedRoute'
 
 interface AppProps {}
 
@@ -101,13 +107,13 @@ function AppRoutes() {
         <Route path="/my-devices" element={user ? <MyDevices /> : <Navigate to="/login" />} />
         <Route path="/device/:id" element={user ? <DeviceDetails /> : <Navigate to="/login" />} />
         <Route path="/notifications" element={user ? <Notifications /> : <Navigate to="/login" />} />
-        <Route path="/marketplace" element={user ? <MarketplaceInbox /> : <Navigate to="/login" />} />
+        <Route path="/marketplace" element={<MarketplaceBrowse />} />
         <Route path="/marketplace/browse" element={<MarketplaceBrowse />} />
-        <Route path="/marketplace/listing/:id" element={user ? <MarketplaceListing /> : <Navigate to="/login" />} />
-        <Route path="/business" element={user ? <BusinessDashboard /> : <Navigate to="/login" />} />
-        <Route path="/business/my-listings" element={user ? <BusinessMyListings /> : <Navigate to="/login" />} />
+        <Route path="/marketplace/listing/:id" element={<MarketplaceListing />} />
+        <Route path="/business" element={<ProtectedRoute allowedRoles={['business','admin']}><BusinessDashboard /></ProtectedRoute>} />
+        <Route path="/business/my-listings" element={<ProtectedRoute allowedRoles={['business','admin']}><BusinessMyListings /></ProtectedRoute>} />
         <Route path="/marketplace/create-listing" element={user ? <CreateListing /> : <Navigate to="/login" />} />
-        <Route path="/device-check" element={user ? <ErrorBoundary><DeviceCheck /></ErrorBoundary> : <Navigate to="/login" />} />
+        <Route path="/device-check" element={<ErrorBoundary><DeviceCheck /></ErrorBoundary>} />
         <Route path="/verification-status" element={user ? <DeviceVerificationStatus /> : <Navigate to="/login" />} />
         <Route path="/device-check-report" element={user ? <DeviceCheckReport /> : <Navigate to="/login" />} />
         <Route path="/register-device" element={user ? <DeviceRegistration /> : <Navigate to="/login" />} />
@@ -115,55 +121,59 @@ function AppRoutes() {
           <Route path="/reports" element={user ? <ReportsV2 /> : <Navigate to="/login" />} />
           <Route path="/reports-v2" element={user ? <ReportsV2 /> : <Navigate to="/login" />} />
           <Route path="/reports/:caseId" element={user ? <ReportDetails /> : <Navigate to="/login" />} />
-        <Route path="/admin" element={user ? <ErrorBoundary><AdminDashboard /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/admin/alerts" element={user ? <ErrorBoundary><AdminAlerts /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/admin/device-management" element={user ? <ErrorBoundary><AdminDeviceManagement /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/admin/device-management/category/:categoryKey" element={user ? <ErrorBoundary><AdminDeviceManagement /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/admin/devices/:id" element={user ? <ErrorBoundary><AdminDeviceDetails /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/admin/lea-management" element={user ? <ErrorBoundary><AdminLEAManagement /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/admin/report-management" element={user ? <ErrorBoundary><AdminReportManagement /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/admin/report-management/:caseId" element={user ? <ErrorBoundary><AdminCaseDetails /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/admin/system-settings" element={user ? <ErrorBoundary><AdminSystemSettings /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/admin/transfers" element={user ? <ErrorBoundary><AdminTransferHistory /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/lea" element={user ? <LEAPortal /> : <Navigate to="/login" />} />
-        <Route path="/lea/alerts" element={user ? <LEAAlerts /> : <Navigate to="/login" />} />
-        <Route path="/lea/cases" element={user ? <LEACases /> : <Navigate to="/login" />} />
-        <Route path="/lea/cases/:id" element={user ? <LEACaseDetails /> : <Navigate to="/login" />} />
-        <Route path="/lea/devices/:id" element={user ? <LEADeviceDetails /> : <Navigate to="/login" />} />
-        <Route path="/lea/communication" element={user ? <LEACommunication /> : <Navigate to="/login" />} />
-        <Route path="/lea/device-search" element={user ? <LEADeviceSearch /> : <Navigate to="/login" />} />
-        <Route path="/lea/recovery" element={user ? <LEARecovery /> : <Navigate to="/login" />} />
-        <Route path="/lea/settings" element={user ? <LEASettings /> : <Navigate to="/login" />} />
-        <Route path="/lea/transfers" element={user ? <LEATransferHistory /> : <Navigate to="/login" />} />
+        <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminDashboard /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/alerts" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminAlerts /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/device-management" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminDeviceManagement /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/device-management/category/:categoryKey" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminDeviceManagement /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/devices/:id" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminDeviceDetails /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/lea-management" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminLEAManagement /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/report-management" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminReportManagement /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/report-management/:caseId" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminCaseDetails /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/system-settings" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminSystemSettings /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/transfers" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminTransferHistory /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/lea" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEAPortal /></ProtectedRoute>} />
+        <Route path="/lea/alerts" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEAAlerts /></ProtectedRoute>} />
+        <Route path="/lea/cases" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEACases /></ProtectedRoute>} />
+        <Route path="/lea/cases/:id" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEACaseDetails /></ProtectedRoute>} />
+        <Route path="/lea/devices/:id" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEADeviceDetails /></ProtectedRoute>} />
+        <Route path="/lea/communication" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEACommunication /></ProtectedRoute>} />
+        <Route path="/lea/device-search" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEADeviceSearch /></ProtectedRoute>} />
+        <Route path="/lea/recovery" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEARecovery /></ProtectedRoute>} />
+        <Route path="/lea/settings" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEASettings /></ProtectedRoute>} />
+        <Route path="/lea/transfers" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEATransferHistory /></ProtectedRoute>} />
         <Route path="/transfer" element={user ? <DeviceTransfer /> : <Navigate to="/login" />} />
-        <Route path="/found-device" element={user ? <FoundDevice /> : <Navigate to="/login" />} />
+        <Route path="/found-device" element={<FoundDevice />} />
         <Route path="/verify-email" element={<EmailVerification />} />
         <Route path="/verify-device" element={<VerifyDevice />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<PasswordReset />} />
-        <Route path="/user-management" element={user ? <UserManagement /> : <Navigate to="/login" />} />
-        <Route path="/analytics" element={user ? <Analytics /> : <Navigate to="/login" />} />
+        <Route path="/user-management" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute allowedRoles={['admin']}><Analytics /></ProtectedRoute>} />
         <Route path="/report-missing" element={user ? <ReportMissing /> : <Navigate to="/login" />} />
         <Route path="/business-register" element={<BusinessRegister />} />
         <Route path="/bulk-register" element={user ? <BulkDeviceRegistration /> : <Navigate to="/login" />} />
-        <Route path="/audit-trail" element={user ? <AuditTrail /> : <Navigate to="/login" />} />
+        <Route path="/audit-trail" element={<ProtectedRoute allowedRoles={['admin']}><AuditTrail /></ProtectedRoute>} />
         <Route path="/profile" element={user ? <Profile /> : <Navigate to="/login" />} />
         <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
         <Route path="/marketplace-inbox" element={user ? <MarketplaceInbox /> : <Navigate to="/login" />} />
         <Route path="/marketplace-inbox/:id" element={user ? <MarketplaceThread /> : <Navigate to="/login" />} />
-        <Route path="/search" element={user ? <Search /> : <Navigate to="/login" />} />
+        <Route path="/search" element={<Search />} />
         <Route path="/payments/add-method" element={user ? <PaymentAddMethod /> : <Navigate to="/login" />} />
         <Route path="/payments/method-selection" element={user ? <PaymentMethodSelection /> : <Navigate to="/login" />} />
         <Route path="/payments/confirm" element={user ? <PaymentConfirmation /> : <Navigate to="/login" />} />
+        <Route path="/payment/callback" element={user ? <PaymentCallback /> : <Navigate to="/login" />} />
         <Route path="/payments/transactions" element={user ? <TransactionHistory /> : <Navigate to="/login" />} />
         <Route path="/orders" element={user ? <BuyerOrders /> : <Navigate to="/login" />} />
-        <Route path="/seller/orders" element={user ? <SellerOrders /> : <Navigate to="/login" />} />
-        <Route path="/business/payouts" element={user ? <BusinessPayouts /> : <Navigate to="/login" />} />
+        <Route path="/seller/orders" element={<ProtectedRoute allowedRoles={['business','admin']}><SellerOrders /></ProtectedRoute>} />
+        <Route path="/business/payouts" element={<ProtectedRoute allowedRoles={['business','admin']}><BusinessPayouts /></ProtectedRoute>} />
+        <Route path="/business/payout-settings" element={<ProtectedRoute allowedRoles={['business','admin']}><SellerPayoutSettings /></ProtectedRoute>} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
 
 
-        <Route path="/admin/device-categories" element={user ? <AdminDeviceCategories /> : <Navigate to="/login" />} />
-        <Route path="/admin/landing-content" element={user ? <ErrorBoundary><LandingContentManager /></ErrorBoundary> : <Navigate to="/login" />} />
-        <Route path="/admin/marketplace" element={user ? <ErrorBoundary><AdminMarketplaceManagement /></ErrorBoundary> : <Navigate to="/login" />} />
+        <Route path="/admin/device-categories" element={<ProtectedRoute allowedRoles={['admin']}><AdminDeviceCategories /></ProtectedRoute>} />
+        <Route path="/admin/landing-content" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><LandingContentManager /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/marketplace" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminMarketplaceManagement /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={user ? <Checkout /> : <Navigate to="/login" />} />
         {/* Catch-all route: send all unknown links to NotFound with back to dashboard */}
         <Route path="*" element={<NotFound />} />
@@ -176,10 +186,12 @@ function App({}: AppProps = {}) {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ToastProvider>
-          <CustomCursor />
-          <AppRoutes />
-        </ToastProvider>
+        <CartProvider>
+          <ToastProvider>
+            <CustomCursor />
+            <AppRoutes />
+          </ToastProvider>
+        </CartProvider>
       </AuthProvider>
     </ThemeProvider>
   )

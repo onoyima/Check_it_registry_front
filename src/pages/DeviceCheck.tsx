@@ -250,7 +250,7 @@ export default function DeviceCheck() {
   }
 
   return (
-    <Layout requireAuth>
+    <Layout>
       <div className="container-fluid">
         {/* Header */}
         <motion.div 

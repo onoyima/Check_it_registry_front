@@ -1,161 +1,179 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Shield, CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw, Eye, Copy, Smartphone, Search, Loader2 } from 'lucide-react'
 import { Layout } from '../components/Layout'
-import { useAuth } from '../contexts/AuthContext'
 import { useToast, ToastContainer } from '../components/Toast'
+import { Link } from 'react-router-dom'
 
-type VerificationItem = {
+type Verification = {
   id: string
-  device: string
-  owner: string
-  submitted: string
-  status: 'pending' | 'in_review' | 'verified' | 'rejected' | 'unverified'
+  device_id: string
+  method: string
+  status: string
+  created_at: string
+  verified_at: string | null
+  device?: { brand: string; model: string; imei: string; serial: string }
 }
 
 export default function DeviceVerificationStatus() {
-  const { user } = useAuth()
-  const { toasts, removeToast, showError } = useToast()
-  const [items, setItems] = useState<VerificationItem[]>([])
+  const { toasts, removeToast, showSuccess, showError } = useToast()
+  const [verifications, setVerifications] = useState<Verification[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [status, setStatus] = useState<'all'|'pending'|'in_review'|'verified'|'rejected'|'unverified'>('all')
-  const [q, setQ] = useState('')
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState('all')
 
-  // Unified API base: prefer VITE_API_BASE_URL, fallback to VITE_API_URL or dev proxy '/api'
-  const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || ''
-  const API_URL = API_BASE ? `${API_BASE}/api` : (import.meta.env.VITE_API_URL || '/api')
+  const fetchVerifications = async () => {
+    try {
+      setLoading(true)
+      const token = localStorage.getItem('auth_token')
+      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/devices/verifications`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) throw new Error('Failed to load')
+      const data = await res.json()
+      setVerifications(data.data || [])
+    } catch {
+      setVerifications([])
+    } finally { setLoading(false) }
+  }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const token = localStorage.getItem('auth_token')
-        if (!token) throw new Error('Authentication required')
+  useEffect(() => { fetchVerifications() }, [])
 
-        // Admins/managers: load verification queue
-        if (user?.role === 'admin' || user?.role === 'manager' || user?.role === 'business') {
-          const res = await fetch(`${API_URL}/admin-portal/verification-queue`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          const json = await res.json().catch(() => ({}))
-          if (!res.ok) throw new Error(json.error || 'Failed to load verification queue')
-          const queue = (json?.devices || []) as any[]
-          const mapped: VerificationItem[] = queue.map((d, idx) => ({
-            id: d.id || `REQ-${idx + 1}`,
-            device: `${d.brand || ''} ${d.model || ''} ${d.imei ? `(IMEI ${d.imei})` : d.serial ? `(SN ${d.serial})` : ''}`.trim(),
-            owner: d.owner_name || d.user_name || d.user_email || 'Unknown',
-            submitted: d.created_at || new Date().toISOString(),
-            status: (d.status as any) || 'pending'
-          }))
-          setItems(mapped)
-        } else {
-          // Regular users: load own devices and show verification status
-          const res = await fetch(`${API_URL}/user-portal/devices?limit=100`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          const json = await res.json().catch(() => ({}))
-          if (!res.ok) throw new Error(json.error || 'Failed to load devices')
-          const devices = (json?.data?.devices || json || []) as any[]
-          const mapped: VerificationItem[] = devices.map((d) => ({
-            id: d.id,
-            device: `${d.brand || ''} ${d.model || ''} ${d.imei ? `(IMEI ${d.imei})` : d.serial ? `(SN ${d.serial})` : ''}`.trim(),
-            owner: user?.name || 'You',
-            submitted: d.created_at || new Date().toISOString(),
-            status: (d.status as any) || 'unverified'
-          }))
-          setItems(mapped)
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Failed to load verification status'
-        setError(msg)
-        showError('Loading Error', msg)
-      } finally {
-        setLoading(false)
-      }
+  const filtered = verifications.filter(v => {
+    if (filter !== 'all' && v.status !== filter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      const d = v.device
+      if (!d) return false
+      return d.brand.toLowerCase().includes(q) || d.model.toLowerCase().includes(q) || d.imei.includes(q) || d.serial.toLowerCase().includes(q) || v.id.toLowerCase().includes(q)
     }
-    fetchData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.role])
+    return true
+  })
 
-  const filtered = useMemo(() => items.filter(i => (
-    (status === 'all' || i.status === status) &&
-    (i.id.toLowerCase().includes(q.toLowerCase()) || i.device.toLowerCase().includes(q.toLowerCase()) || i.owner.toLowerCase().includes(q.toLowerCase()))
-  )), [items, status, q])
+  const statusBadge = (s: string) => {
+    const map: Record<string, string> = { verified: 'status-verified', pending: 'status-pending', failed: 'status-stolen', expired: 'status-unverified' }
+    return <span className={`status-badge ${map[s] || ''}`}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
+  }
+
+  const statusIcon = (s: string) => {
+    if (s === 'verified') return <CheckCircle size={18} style={{ color: 'var(--success-500)' }} />
+    if (s === 'failed') return <XCircle size={18} style={{ color: 'var(--danger-500)' }} />
+    if (s === 'expired') return <AlertTriangle size={18} style={{ color: 'var(--warning-500)' }} />
+    return <Clock size={18} style={{ color: 'var(--warning-500)' }} />
+  }
+
+  const stats = [
+    { label: 'Total', value: verifications.length, icon: Shield, color: 'var(--primary-600)' },
+    { label: 'Verified', value: verifications.filter(v => v.status === 'verified').length, icon: CheckCircle, color: 'var(--success-500)' },
+    { label: 'Pending', value: verifications.filter(v => v.status === 'pending').length, icon: Clock, color: 'var(--warning-500)' },
+    { label: 'Failed', value: verifications.filter(v => v.status === 'failed').length, icon: XCircle, color: 'var(--danger-500)' },
+  ]
 
   return (
     <Layout requireAuth>
-      <div className="container py-4">
-        <h2 className="fw-bold mb-3">Verification Status</h2>
-
-        <div className="modern-card p-3 mb-3">
-          <div className="row g-3">
-            <div className="col-12 col-md-6">
-              <input className="modern-input" placeholder="Search by ID, device, owner" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="container-fluid">
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="page-header">
+              <div className="d-flex align-items-center gap-3 flex-wrap">
+                <div className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--primary-500), var(--primary-700))' }}>
+                  <Shield size={24} className="text-white" />
+                </div>
+                <div>
+                  <h1>Verification Status</h1>
+                  <p>Track device verification requests</p>
+                </div>
+                <div className="ms-md-auto">
+                  <button className="btn-ghost d-inline-flex align-items-center gap-2" onClick={fetchVerifications}>
+                    <RefreshCw size={16} /> Refresh
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="col-12 col-md-6 d-flex gap-2 align-items-center">
-              <label className="text-secondary">Status:</label>
-              <select className="form-select" style={{ maxWidth: 240 }} value={status} onChange={(e) => setStatus(e.target.value as any)}>
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="in_review">In Review</option>
+          </div>
+        </div>
+
+        <div className="row g-3 mb-4">
+          {stats.map(s => (
+            <div className="col-6 col-md-3" key={s.label}>
+              <div className="stat-card">
+                <div className="d-flex align-items-center gap-3">
+                  <s.icon size={24} style={{ color: s.color }} />
+                  <div>
+                    <p className="stat-label">{s.label}</p>
+                    <p className="stat-value" style={{ color: s.color }}>{s.value}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="modern-card p-3 mb-4">
+          <div className="row g-2 align-items-center">
+            <div className="col-12 col-md-6">
+              <div className="d-flex align-items-center gap-2 modern-input" style={{ padding: '0 12px' }}>
+                <Search size={18} style={{ color: 'var(--text-secondary)' }} />
+                <input type="text" placeholder="Search by device, IMEI, or ID..." className="flex-grow-1" style={{ border: 'none', outline: 'none', background: 'transparent', padding: '8px 0' }} value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+            </div>
+            <div className="col-6 col-md-3">
+              <select className="modern-select" value={filter} onChange={e => setFilter(e.target.value)}>
+                <option value="all">All Status</option>
                 <option value="verified">Verified</option>
-                <option value="rejected">Rejected</option>
-                <option value="unverified">Unverified</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+                <option value="expired">Expired</option>
               </select>
             </div>
           </div>
         </div>
 
-        <div className="modern-card p-0">
-          {loading ? (
-            <div className="text-center py-4">
-              <div className="spinner-border" style={{ color: 'var(--primary-600)' }} />
-              <p className="mt-3" style={{ color: 'var(--text-secondary)' }}>Loading…</p>
+        {loading ? (
+          <div className="modern-card p-5 text-center">
+            <Loader2 size={32} className="spinner-border" style={{ color: 'var(--primary-600)' }} />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="modern-card p-5 text-center">
+            <div className="empty-state">
+              <div className="empty-state-icon"><Shield size={48} /></div>
+              <h3>No Verifications Found</h3>
+              <p>{search || filter !== 'all' ? 'Try adjusting your filters' : 'No verification requests yet'}</p>
+              <Link to="/verify-device" className="btn-gradient-primary mt-3">Verify a Device</Link>
             </div>
-          ) : error ? (
-            <div className="alert alert-danger m-3">{error}</div>
-          ) : (
-            <div className="table-responsive">
-              <table className="table align-middle m-0">
-                <thead>
-                  <tr>
-                    <th>Request</th>
-                    <th>Device</th>
-                    <th>Owner</th>
-                    <th>Submitted</th>
-                    <th>Status</th>
-                    <th className="text-end">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(i => (
-                    <tr key={i.id}>
-                      <td className="fw-semibold">{i.id}</td>
-                      <td>{i.device}</td>
-                      <td>{i.owner}</td>
-                      <td>{new Date(i.submitted).toLocaleDateString()}</td>
-                      <td>
-                        <span className={`status-badge ${i.status === 'verified' ? 'status-verified' : i.status === 'in_review' ? 'status-unverified' : i.status === 'pending' ? 'status-found' : i.status === 'rejected' ? 'status-stolen' : 'status-unverified'}`}>{i.status.replace('_',' ')}</span>
-                      </td>
-                      <td className="text-end">
-                        <div className="btn-group">
-                          <button className="btn btn-sm btn-outline-primary">View</button>
-                          <button className="btn btn-sm btn-outline-secondary">Message</button>
+          </div>
+        ) : (
+          <div className="row g-3">
+            {filtered.map((v, i) => (
+              <motion.div key={v.id} className="col-12" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+                <div className="modern-card p-3">
+                  <div className="row g-3 align-items-center">
+                    <div className="col-12 col-md-5">
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="avatar" style={{ background: 'var(--primary-50)' }}><Smartphone size={20} style={{ color: 'var(--primary-600)' }} /></div>
+                        <div>
+                          <p className="fw-medium mb-1">{v.device?.brand || 'Unknown'} {v.device?.model || ''}</p>
+                          <p style={{ color: 'var(--text-secondary)', fontSize: 12 }}>IMEI: {v.device?.imei || '—'} &middot; {v.method}</p>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filtered.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="text-center text-secondary py-4">No verification records found</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
+                      </div>
+                    </div>
+                    <div className="col-4 col-md-2">{statusBadge(v.status)}</div>
+                    <div className="col-4 col-md-2 d-flex align-items-center gap-1" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      {statusIcon(v.status)}
+                      {v.verified_at ? new Date(v.verified_at).toLocaleDateString() : new Date(v.created_at).toLocaleDateString()}
+                    </div>
+                    <div className="col-4 col-md-3 text-md-end">
+                      <button className="btn-ghost d-inline-flex align-items-center gap-1" style={{ fontSize: 13 }} onClick={() => navigator.clipboard?.writeText(v.id)}>
+                        <Copy size={14} /> ID
+                      </button>
+                      <Link to={`/device-details/${v.device_id}`} className="btn-ghost d-inline-flex align-items-center gap-1 ms-1" style={{ fontSize: 13 }}>
+                        <Eye size={14} /> View
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
         <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>
     </Layout>

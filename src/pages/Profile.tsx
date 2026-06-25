@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   User, 
   Mail, 
@@ -16,7 +16,8 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -24,6 +25,7 @@ import { useToast, ToastContainer } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import KYCVerificationModal from '../components/KYCVerificationModal'
+import { supabase } from '../lib/supabase'
 
 // Interface matching the backend response
 interface UserProfile {
@@ -34,6 +36,7 @@ interface UserProfile {
   region?: string
   role: string
   profile_image_url?: string
+  verified_photo_url?: string
   created_at: string
   verified_at?: string
   last_login_at?: string
@@ -58,6 +61,8 @@ export default function Profile() {
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'security' | 'activity'>('overview')
   const [showKYCModal, setShowKYCModal] = useState(false)
   
@@ -165,6 +170,27 @@ export default function Profile() {
     }
   }
 
+  const handleImageUpload = async (file: File) => {
+    try {
+      setUploadingImage(true)
+      const result = await supabase.profile.uploadImage(file)
+      if (result?.image_url) {
+        setProfile(prev => prev ? { ...prev, profile_image_url: result.image_url } : null)
+        showSuccess('Profile photo updated')
+      }
+    } catch (err: any) {
+      showError(err.message || 'Failed to upload image')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleImageUpload(file)
+    e.target.value = ''
+  }
+
   const handleCancel = () => {
     if (profile) {
       setFormData({
@@ -222,13 +248,13 @@ export default function Profile() {
                 </p>
               </div>
               
-              <div className="d-flex gap-2 align-items-center flex-wrap">
+              <div className="d-flex gap-2 align-items-center flex-wrap w-100">
                 {/* KYC Buttons */}
                 {profile.kyc_status !== 'verified' && profile.kyc_status !== 'pending' && (
                   <button 
                     onClick={() => setShowKYCModal(true)}
-                    className="btn btn-success d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm text-white border-0"
-                    style={{ background: 'var(--success-600)' }}
+                    className="btn d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm text-white border-0"
+                    style={{ background: 'var(--success-500)' }}
                   >
                     <Shield size={18} />
                     Verify Identity
@@ -238,8 +264,8 @@ export default function Profile() {
                 {profile.kyc_status === 'pending' && (
                   <button 
                     disabled
-                    className="btn btn-warning d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm text-dark border-0"
-                    style={{ opacity: 0.8 }}
+                    className="btn d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm text-dark border-0"
+                    style={{ background: 'var(--warning-500)', opacity: 0.8 }}
                   >
                     <Clock size={18} />
                     Verification Pending
@@ -249,17 +275,18 @@ export default function Profile() {
                 {!editing ? (
                   <button 
                     onClick={() => setEditing(true)}
-                    className="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm"
-                    style={{ background: 'var(--primary-600)', border: 'none' }}
+                    className="btn d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm text-white border-0"
+                    style={{ background: 'var(--primary-500)' }}
                   >
                     <Edit3 size={18} />
                     Edit Profile
                   </button>
                 ) : (
-                  <div className="d-flex gap-2">
+                  <div className="d-flex gap-2 flex-wrap">
                     <button 
                       onClick={handleCancel}
-                      className="btn btn-light d-flex align-items-center gap-2 px-4 py-2 rounded-pill border"
+                      className="btn d-flex align-items-center gap-2 px-4 py-2 rounded-pill border"
+                      style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                       disabled={saving}
                     >
                       <X size={18} />
@@ -267,8 +294,8 @@ export default function Profile() {
                     </button>
                     <button 
                       onClick={handleSave}
-                      className="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm"
-                      style={{ background: 'var(--primary-600)', border: 'none' }}
+                      className="btn d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm text-white border-0"
+                      style={{ background: 'var(--primary-500)' }}
                       disabled={saving}
                     >
                       {saving ? (
@@ -365,13 +392,24 @@ export default function Profile() {
                     )}
                     
                     {editing && (
-                      <button 
-                        className="btn btn-sm btn-light rounded-circle position-absolute bottom-0 end-0 shadow-sm border"
-                        style={{ width: '32px', height: '32px', padding: 0, right: profile.is_verified ? '-35px' : '0' }}
-                        title="Change Photo"
-                      >
-                        <Camera size={14} className="text-muted" />
-                      </button>
+                      <>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif"
+                          style={{ display: 'none' }}
+                          onChange={handleFileChange}
+                        />
+                        <button 
+                          className="btn btn-sm btn-light rounded-circle position-absolute bottom-0 end-0 shadow-sm border"
+                          style={{ width: '32px', height: '32px', padding: 0, right: profile.is_verified ? '-35px' : '0' }}
+                          title="Change Photo"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingImage}
+                        >
+                          {uploadingImage ? <Loader2 size={14} className="spinner-border spinner-border-sm" /> : <Camera size={14} className="text-muted" />}
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -383,6 +421,30 @@ export default function Profile() {
                 </h3>
                 <p className="text-muted mb-3">{profile.email}</p>
                 
+                {/* Two-image display: profile photo + KYC verification photo */}
+                {profile.verified_photo_url && (
+                  <div className="d-flex justify-content-center gap-3 mb-3">
+                    <div className="text-center">
+                      <img
+                        src={profile.profile_image_url || 'https://via.placeholder.com/60'}
+                        alt="Profile"
+                        className="rounded-circle border border-2 border-white shadow-sm"
+                        style={{ width: '56px', height: '56px', objectFit: 'cover' }}
+                      />
+                      <small className="d-block text-muted" style={{ fontSize: 10, marginTop: 2 }}>Profile</small>
+                    </div>
+                    <div className="text-center">
+                      <img
+                        src={profile.verified_photo_url}
+                        alt="Verified ID"
+                        className="rounded-circle border border-2 border-success shadow-sm"
+                        style={{ width: '56px', height: '56px', objectFit: 'cover' }}
+                      />
+                      <small className="d-block text-success" style={{ fontSize: 10, marginTop: 2 }}>Verified ID</small>
+                    </div>
+                  </div>
+                )}
+
                 <div className="d-flex justify-content-center gap-2 mb-4">
                   <span 
                     className="badge py-2 px-3 rounded-pill"
@@ -475,13 +537,13 @@ export default function Profile() {
                     <p className="small mb-4 text-white-50">
                       Unlock full access and build trust by verifying your NIN. It takes less than 2 minutes.
                     </p>
-                    <button 
-                      onClick={() => setShowKYCModal(true)}
-                      className="btn btn-light w-100 fw-bold border-0 shadow-sm"
-                      style={{ color: 'var(--primary-700)' }}
-                    >
-                      Start Verification
-                    </button>
+                <button 
+                  onClick={() => setShowKYCModal(true)}
+                  className="btn w-100 fw-bold border-0 shadow-sm text-white"
+                  style={{ background: 'var(--primary-500)' }}
+                >
+                  Start Verification
+                </button>
                   </div>
                 </div>
               </motion.div>
@@ -498,17 +560,20 @@ export default function Profile() {
               <div className="card-body p-4">
                 <h5 className="fw-bold mb-3" style={{ color: 'var(--text-primary)' }}>Quick Actions</h5>
                 <div className="d-flex flex-column gap-2">
-                  <Link to="/my-devices" className="btn btn-light text-start p-3 d-flex align-items-center gap-3 rounded-3 hover-bg-gray">
-                    <Smartphone size={18} className="text-primary" />
-                    <span className="fw-medium text-dark">Manage Devices</span>
+                  <Link to="/my-devices" className="btn d-flex align-items-center gap-3 rounded-3 text-start p-3 border-0"
+                    style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                    <Smartphone size={18} style={{ color: 'var(--primary-500)' }} />
+                    <span className="fw-medium">Manage Devices</span>
                   </Link>
-                  <Link to="/reports" className="btn btn-light text-start p-3 d-flex align-items-center gap-3 rounded-3 hover-bg-gray">
-                    <FileText size={18} className="text-danger" />
-                    <span className="fw-medium text-dark">View Reports</span>
+                  <Link to="/reports" className="btn d-flex align-items-center gap-3 rounded-3 text-start p-3 border-0"
+                    style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                    <FileText size={18} style={{ color: 'var(--danger-500)' }} />
+                    <span className="fw-medium">View Reports</span>
                   </Link>
-                  <Link to="/transfer" className="btn btn-light text-start p-3 d-flex align-items-center gap-3 rounded-3 hover-bg-gray">
-                    <Activity size={18} className="text-success" />
-                    <span className="fw-medium text-dark">Device Transfers</span>
+                  <Link to="/transfer" className="btn d-flex align-items-center gap-3 rounded-3 text-start p-3 border-0"
+                    style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                    <Activity size={18} style={{ color: 'var(--success-500)' }} />
+                    <span className="fw-medium">Device Transfers</span>
                   </Link>
                 </div>
               </div>
@@ -523,36 +588,39 @@ export default function Profile() {
             >
               {/* Tabs Navigation */}
               <div className="card-header bg-transparent border-bottom pt-4 pb-0 px-4">
-                <nav className="nav nav-pills gap-1">
+                <nav className="nav nav-pills gap-1 flex-nowrap overflow-auto">
                   <button
                     onClick={() => setActiveTab('overview')}
-                    className={`nav-link px-4 py-3 rounded-top-3 fw-medium ${activeTab === 'overview' ? 'active bg-primary-subtle text-primary border-bottom border-primary border-2 rounded-0' : 'text-muted'}`}
+                    className={`nav-link px-3 px-sm-4 py-3 fw-medium`}
                     style={{ 
-                      background: 'transparent',
-                      color: activeTab === 'overview' ? 'var(--primary-600)' : 'var(--text-secondary)',
-                      borderBottom: activeTab === 'overview' ? '3px solid var(--primary-600)' : '3px solid transparent'
+                      background: activeTab === 'overview' ? 'var(--bg-tertiary)' : 'transparent',
+                      color: activeTab === 'overview' ? 'var(--primary-500)' : 'var(--text-secondary)',
+                      borderBottom: activeTab === 'overview' ? '3px solid var(--primary-500)' : '3px solid transparent',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     Overview
                   </button>
                   <button
                     onClick={() => setActiveTab('security')}
-                    className={`nav-link px-4 py-3 rounded-top-3 fw-medium ${activeTab === 'security' ? 'active' : 'text-muted'}`}
+                    className={`nav-link px-3 px-sm-4 py-3 fw-medium`}
                     style={{ 
-                      background: 'transparent',
-                      color: activeTab === 'security' ? 'var(--primary-600)' : 'var(--text-secondary)',
-                      borderBottom: activeTab === 'security' ? '3px solid var(--primary-600)' : '3px solid transparent'
+                      background: activeTab === 'security' ? 'var(--bg-tertiary)' : 'transparent',
+                      color: activeTab === 'security' ? 'var(--primary-500)' : 'var(--text-secondary)',
+                      borderBottom: activeTab === 'security' ? '3px solid var(--primary-500)' : '3px solid transparent',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                      Security
                   </button>
                   <button
                     onClick={() => setActiveTab('activity')}
-                    className={`nav-link px-4 py-3 rounded-top-3 fw-medium ${activeTab === 'activity' ? 'active' : 'text-muted'}`}
+                    className={`nav-link px-3 px-sm-4 py-3 fw-medium`}
                     style={{ 
-                      background: 'transparent',
-                      color: activeTab === 'activity' ? 'var(--primary-600)' : 'var(--text-secondary)',
-                      borderBottom: activeTab === 'activity' ? '3px solid var(--primary-600)' : '3px solid transparent'
+                      background: activeTab === 'activity' ? 'var(--bg-tertiary)' : 'transparent',
+                      color: activeTab === 'activity' ? 'var(--primary-500)' : 'var(--text-secondary)',
+                      borderBottom: activeTab === 'activity' ? '3px solid var(--primary-500)' : '3px solid transparent',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     Activity Log
@@ -695,7 +763,8 @@ export default function Profile() {
                               <p className="text-muted small mb-0">Last changed 30 days ago</p>
                             </div>
                           </div>
-                          <Link to="/password-reset" className="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-medium">
+                          <Link to="/password-reset" className="btn btn-sm px-3 rounded-pill fw-medium"
+                            style={{ border: '1px solid var(--border-color)', color: 'var(--text-primary)', background: 'var(--bg-primary)' }}>
                             Change Password
                           </Link>
                         </div>
@@ -711,7 +780,8 @@ export default function Profile() {
                             </div>
                           </div>
                           <div className="form-check form-switch ps-0">
-                            <Link to="/settings" className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-medium">Configure</Link>
+                            <Link to="/settings" className="btn btn-sm rounded-pill px-3 fw-medium"
+                              style={{ border: '1px solid var(--primary-500)', color: 'var(--primary-500)', background: 'transparent' }}>Configure</Link>
                           </div>
                         </div>
 
@@ -725,7 +795,8 @@ export default function Profile() {
                               <p className="text-muted small mb-0">Manage devices where you're currently logged in</p>
                             </div>
                           </div>
-                          <button className="btn btn-outline-danger btn-sm px-3 rounded-pill fw-medium">
+                          <button className="btn btn-sm px-3 rounded-pill fw-medium"
+                            style={{ border: '1px solid var(--danger-500)', color: 'var(--danger-500)', background: 'transparent' }}>
                             Manage Sessions
                           </button>
                         </div>

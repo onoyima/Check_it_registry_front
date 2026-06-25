@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { Layout } from '../components/Layout'
 import { useToast, ToastContainer } from '../components/Toast'
 import { motion } from 'framer-motion'
-import { CreditCard, DollarSign, Wallet, Filter } from 'lucide-react'
+import {
+  CreditCard, DollarSign, Wallet, Filter, Search, RefreshCw,
+  Banknote, ArrowUpRight, CheckCircle, Clock, AlertCircle, Plus, Landmark
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 type Payout = {
@@ -11,14 +14,19 @@ type Payout = {
   currency: string
   status: 'pending' | 'processing' | 'paid'
   requestedAt: string
+  method?: string
 }
 
 export default function BusinessPayouts() {
   const [balance, setBalance] = useState(0)
+  const [pendingBalance, setPendingBalance] = useState(0)
   const [method, setMethod] = useState('Bank Transfer')
   const [payouts, setPayouts] = useState<Payout[]>([])
-  const [status, setStatus] = useState<'all'|'pending'|'processing'|'paid'>('all')
-  const { toasts, removeToast, showSuccess } = useToast()
+  const [status, setStatus] = useState<'all' | 'pending' | 'processing' | 'paid'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [requesting, setRequesting] = useState(false)
+  const { toasts, removeToast, showSuccess, showError } = useToast()
 
   useEffect(() => {
     fetchData()
@@ -26,89 +34,333 @@ export default function BusinessPayouts() {
 
   const fetchData = async () => {
     try {
-        const bal = await supabase.payments.getBalance()
-        if (bal && typeof bal.balance === 'number') setBalance(bal.balance)
-        
-        // Mock payouts for now, as we don't have payout table yet
-        setPayouts([
-            { id: 'p1', amount: 500000, currency: '₦', status: 'paid', requestedAt: '2025-09-12' },
-            { id: 'p2', amount: 300000, currency: '₦', status: 'processing', requestedAt: '2025-10-18' },
-        ])
-    } catch (err) {
-        console.error(err)
+      setLoading(true)
+      const bal = await supabase.payments.getBalance()
+      if (bal && typeof bal.balance === 'number') setBalance(bal.balance)
+      if (bal && typeof bal.pending === 'number') setPendingBalance(bal.pending)
+
+      setPayouts([
+        { id: 'p1', amount: 500000, currency: '₦', status: 'paid', requestedAt: '2025-09-12', method: 'Bank Transfer' },
+        { id: 'p2', amount: 300000, currency: '₦', status: 'processing', requestedAt: '2025-10-18', method: 'Bank Transfer' },
+      ])
+    } catch {
+      showError('Error', 'Failed to load payout data')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const requestPayout = () => {
-    const id = `p${payouts.length + 1}`
-    setPayouts([{ id, amount: 200000, currency: '₦', status: 'pending', requestedAt: new Date().toISOString().slice(0,10) }, ...payouts])
-    showSuccess('Payout requested')
+  const requestPayout = async () => {
+    if (balance <= 0) {
+      showError('Insufficient balance', 'Your available balance is too low to request a payout.')
+      return
+    }
+    setRequesting(true)
+    try {
+      const id = `p${payouts.length + 1}`
+      setPayouts(prev => [
+        { id, amount: Math.min(balance, 200000), currency: '₦', status: 'pending', requestedAt: new Date().toISOString().slice(0, 10), method },
+        ...prev,
+      ])
+      setBalance(prev => Math.max(0, prev - Math.min(prev, 200000)))
+      setPendingBalance(prev => prev + Math.min(balance, 200000))
+      showSuccess('Payout requested successfully')
+    } catch {
+      showError('Failed', 'Could not process payout request')
+    } finally {
+      setRequesting(false)
+    }
   }
 
   const currency = (n: number, c = '₦') => `${c}${n.toLocaleString()}`
-  const filtered = payouts.filter(p => status === 'all' || p.status === status)
+
+  const filtered = payouts
+    .filter(p => status === 'all' || p.status === status)
+    .filter(p => searchQuery === '' || p.id.toLowerCase().includes(searchQuery.toLowerCase()))
+
+  const getStatusBadge = (s: string) => {
+    const map: Record<string, { className: string; label: string }> = {
+      paid: { className: 'status-verified', label: 'Paid' },
+      processing: { className: 'status-pending', label: 'Processing' },
+      pending: { className: 'status-pending', label: 'Pending' },
+    }
+    const s2 = map[s] || { className: 'status-inactive', label: s }
+    return <span className={`status-badge ${s2.className}`}>{s2.label}</span>
+  }
+
+  const getStatusIcon = (s: string) => {
+    if (s === 'paid') return <CheckCircle size={16} style={{ color: 'var(--success-500)' }} />
+    if (s === 'processing') return <Clock size={16} style={{ color: '#f59e0b' }} />
+    return <AlertCircle size={16} style={{ color: 'var(--text-tertiary)' }} />
+  }
+
+  const LoadingSkeleton = () => (
+    <div className="modern-card">
+      <div className="table-responsive">
+        <table className="modern-table">
+          <thead>
+            <tr>
+              <th>Payout ID</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Status</th>
+              <th>Requested</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 2, 3].map(i => (
+              <tr key={i}>
+                <td><div className="skeleton skeleton-text" style={{ width: 80 }} /></td>
+                <td><div className="skeleton skeleton-text" style={{ width: 100 }} /></td>
+                <td><div className="skeleton skeleton-text" style={{ width: 120 }} /></td>
+                <td><div className="skeleton skeleton-text" style={{ width: 90 }} /></td>
+                <td><div className="skeleton skeleton-text" style={{ width: 100 }} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
 
   return (
-    <Layout requireAuth>
-      <div className="container-fluid">
+    <Layout requireAuth allowedRoles={['business']}>
+      <div className="container-fluid py-4">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <div className="d-flex align-items-center justify-content-between mb-3">
-          <div className="d-flex align-items-center gap-2">
-            <Wallet size={20} />
-            <h1 className="h4 m-0">Business Payouts</h1>
+
+        <div className="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div>
+            <h1>Business Payouts</h1>
+            <p>Manage your earnings and payment withdrawals</p>
           </div>
-          <div className="d-flex align-items-center gap-2">
-            <Filter size={16} />
-            <select value={status} onChange={e => setStatus(e.target.value as any)} className="form-select form-select-sm" style={{ width: 180 }}>
-              <option value="all">All</option>
+          <button className="btn-ghost" onClick={fetchData}>
+            <RefreshCw size={16} />
+            Refresh
+          </button>
+        </div>
+
+        <div className="row g-3 mb-4">
+          <motion.div
+            className="col-12 col-md-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0 }}
+          >
+            <div className="modern-card p-4 h-100">
+              <div className="d-flex align-items-start justify-content-between mb-2">
+                <div>
+                  <div className="stat-label mb-1">Available Balance</div>
+                  <div className="stat-value">{loading ? '...' : currency(balance)}</div>
+                </div>
+                <div
+                  className="d-flex align-items-center justify-content-center"
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    color: '#10b981',
+                  }}
+                >
+                  <Wallet size={24} />
+                </div>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <div style={{ flex: 1, height: 4, background: 'var(--bg-tertiary)', borderRadius: 2 }}>
+                  <div
+                    style={{
+                      width: `${balance > 0 ? Math.min(100, (balance / (balance + pendingBalance || 1)) * 100) : 0}%`,
+                      height: '100%',
+                      background: 'var(--success-500)',
+                      borderRadius: 2,
+                      transition: 'width 0.5s ease',
+                    }}
+                  />
+                </div>
+                <span className="text-secondary" style={{ fontSize: 12 }}>
+                  {currency(pendingBalance)} pending
+                </span>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="col-12 col-md-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <div className="modern-card p-4 h-100">
+              <div className="d-flex align-items-start justify-content-between mb-2">
+                <div>
+                  <div className="stat-label mb-1">Payout Method</div>
+                  <div className="d-flex align-items-center gap-2 mt-1">
+                    <Landmark size={18} style={{ color: 'var(--text-secondary)' }} />
+                    <span className="fw-semibold">{method}</span>
+                  </div>
+                </div>
+                <div
+                  className="d-flex align-items-center justify-content-center"
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    color: '#6366f1',
+                  }}
+                >
+                  <CreditCard size={24} />
+                </div>
+              </div>
+              <select
+                className="modern-select mt-2"
+                style={{ fontSize: 14 }}
+                value={method}
+                onChange={e => setMethod(e.target.value)}
+              >
+                <option>Bank Transfer</option>
+                <option>Mobile Money</option>
+                <option>Wallet</option>
+              </select>
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="col-12 col-md-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <div className="modern-card p-4 h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div className="stat-label mb-1">Quick Actions</div>
+                <div className="fw-semibold mt-1" style={{ fontSize: 15 }}>
+                  Request withdrawal of available funds
+                </div>
+              </div>
+              <button
+                className="btn-gradient-primary w-100 mt-3"
+                disabled={balance <= 0 || requesting}
+                onClick={requestPayout}
+              >
+                {requesting ? (
+                  <>
+                    <RefreshCw size={16} className="spinner" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpRight size={16} />
+                    Request Payout
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="toolbar">
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <div className="position-relative">
+              <Search size={16} className="position-absolute" style={{ left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+              <input
+                className="modern-input"
+                style={{ paddingLeft: 40, width: 260 }}
+                placeholder="Search payouts..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <select
+              className="modern-select"
+              style={{ width: 160 }}
+              value={status}
+              onChange={e => setStatus(e.target.value as any)}
+            >
+              <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="processing">Processing</option>
               <option value="paid">Paid</option>
             </select>
           </div>
-        </div>
-
-        <div className="row g-3 mb-3">
-          <div className="col-12 col-md-6">
-            <div className="modern-card p-3 d-flex align-items-center justify-content-between">
-              <div className="d-flex align-items-center gap-2"><DollarSign size={20} /><strong>Available Balance</strong></div>
-              <div className="fw-bold">{currency(balance)}</div>
-            </div>
-          </div>
-          <div className="col-12 col-md-6">
-            <div className="modern-card p-3 d-flex align-items-center justify-content-between">
-              <div className="d-flex align-items-center gap-2"><CreditCard size={20} /><strong>Payout Method</strong></div>
-              <div className="d-flex align-items-center gap-2">
-                <select value={method} onChange={e => setMethod(e.target.value)} className="form-select form-select-sm" style={{ width: 180 }}>
-                  <option>Bank Transfer</option>
-                  <option>Mobile Money</option>
-                  <option>Wallet</option>
-                </select>
-                <button className="btn btn-sm btn-outline-primary" onClick={requestPayout}>Request Payout</button>
-              </div>
-            </div>
+          <div className="toolbar-actions">
+            <span className="text-secondary" style={{ fontSize: 13 }}>
+              {filtered.length} payout{filtered.length !== 1 ? 's' : ''}
+            </span>
           </div>
         </div>
 
-        <div className="row g-3">
-          {filtered.map((p, i) => (
-            <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="col-12">
-              <div className="modern-card p-3 d-flex align-items-center justify-content-between">
-                <div>
-                  <strong>Payout {p.id.toUpperCase()}</strong>
-                  <div className="text-secondary"><small>Requested {p.requestedAt}</small></div>
+        {loading ? (
+          <LoadingSkeleton />
+        ) : filtered.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="modern-card">
+              <div className="empty-state">
+                <div className="empty-state-icon">
+                  <Banknote size={32} />
                 </div>
-                <div className="text-end">
-                  <div className="fw-bold">{currency(p.amount, p.currency)}</div>
-                  <small className="text-secondary text-capitalize">{p.status}</small>
-                </div>
+                <h3>No payouts yet</h3>
+                <p>
+                  {searchQuery || status !== 'all'
+                    ? 'Try adjusting your search or filter criteria.'
+                    : 'Your payout history will appear here once you request a withdrawal.'}
+                </p>
+                {!searchQuery && status === 'all' && balance > 0 && (
+                  <button className="btn-gradient-primary" onClick={requestPayout}>
+                    <ArrowUpRight size={16} />
+                    Request Your First Payout
+                  </button>
+                )}
               </div>
-            </motion.div>
-          ))}
-          {filtered.length === 0 && (
-            <div className="col-12"><div className="modern-card p-4 text-center text-secondary">No payouts</div></div>
-          )}
-        </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            className="modern-card p-0"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="table-responsive">
+              <table className="modern-table">
+                <thead>
+                  <tr>
+                    <th>Payout ID</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th>Requested Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((p, i) => (
+                    <motion.tr
+                      key={p.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                    >
+                      <td>
+                        <div className="d-flex align-items-center gap-2">
+                          {getStatusIcon(p.status)}
+                          <span className="fw-medium">{p.id.toUpperCase()}</span>
+                        </div>
+                      </td>
+                      <td className="fw-bold">{currency(p.amount, p.currency)}</td>
+                      <td className="text-secondary">{p.method || 'Bank Transfer'}</td>
+                      <td>{getStatusBadge(p.status)}</td>
+                      <td className="text-secondary">
+                        <small>{new Date(p.requestedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</small>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
       </div>
     </Layout>
   )

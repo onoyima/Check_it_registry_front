@@ -83,7 +83,7 @@ export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   return (
     <div 
       className="position-fixed top-0 end-0 p-3 p-md-4 d-flex flex-column gap-3 pointer-events-none" 
-      style={{ zIndex: 9999, width: '100%', maxWidth: '450px' }}
+      style={{ zIndex: 100000, width: '100%', maxWidth: '450px', marginTop: '72px' }}
     >
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (

@@ -1,231 +1,189 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { motion } from 'framer-motion'
+import { Search, Smartphone, MapPin, MessageSquare, Camera, Send, CheckCircle, Loader2, ArrowLeft } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { useAuth } from '../contexts/AuthContext'
 import { useToast, ToastContainer } from '../components/Toast'
-import { ButtonLoading } from '../components/Loading'
+
+type Step = 'lookup' | 'details' | 'contact' | 'success'
 
 export default function FoundDevice() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const { toasts, removeToast, showSuccess, showError } = useToast()
+  const [step, setStep] = useState<Step>('lookup')
   const [imei, setImei] = useState('')
   const [serial, setSerial] = useState('')
-  const [checkResult, setCheckResult] = useState<any>(null)
-  const [reportData, setReportData] = useState({
-    location: '',
-    description: '',
-    finder_contact: ''
-  })
-  const [checking, setChecking] = useState(false)
-  const [reporting, setReporting] = useState(false)
-  const { toasts, removeToast, showSuccess, showError, showInfo } = useToast()
+  const [deviceData, setDeviceData] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({ location: '', description: '', contactName: '', contactEmail: '', contactPhone: '' })
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleCheck = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!imei.trim() && !serial.trim()) {
-      showError('Validation Error', 'Please enter either IMEI or serial number')
-      return
-    }
-
+  const handleLookup = async () => {
+    if (!imei && !serial) { showError('Enter an IMEI or serial number'); return }
     try {
-      setChecking(true)
-      setCheckResult(null)
-      
-      const params = imei.trim() ? { imei: imei.trim() } : { serial: serial.trim() }
-      const result = await supabase.foundDevice.check(params)
-      
-      setCheckResult(result)
-      
-      if (result.status === 'stolen' || result.status === 'lost') {
-        showInfo('Device Found!', 'This device has been reported missing. You can help reunite it with the owner.')
-      } else {
-        showInfo('Device Check', 'You can report finding this device to help if the owner is looking for it.')
-      }
-    } catch (err) {
-      console.error('Error checking device:', err)
-      showError('Check Failed', err instanceof Error ? err.message : 'Failed to check device')
-    } finally {
-      setChecking(false)
-    }
+      setLoading(true)
+      const q = imei || serial
+      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/devices/lookup?q=${encodeURIComponent(q)}`)
+      if (!res.ok) throw new Error('Device not found in registry')
+      const data = await res.json()
+      setDeviceData(data.data || data)
+      setStep('details')
+    } catch (err: any) { showError(err.message) }
+    finally { setLoading(false) }
   }
 
-  const handleReport = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!reportData.location.trim() || !reportData.finder_contact.trim()) {
-      showError('Validation Error', 'Please fill in location and contact information')
-      return
-    }
-
     try {
-      setReporting(true)
-      
-      const reportPayload = {
-        imei: imei.trim() || null,
-        serial: serial.trim() || null,
-        location: reportData.location.trim(),
-        description: reportData.description.trim(),
-        finder_contact: reportData.finder_contact.trim()
-      }
-      
-      await supabase.foundDevice.report(reportPayload)
-      
-      showSuccess('Report Submitted', 'Thank you for reporting the found device. The owner will be notified.')
-      
-      // Reset form
-      setImei('')
-      setSerial('')
-      setCheckResult(null)
-      setReportData({ location: '', description: '', finder_contact: '' })
-    } catch (err) {
-      console.error('Error reporting found device:', err)
-      showError('Report Failed', err instanceof Error ? err.message : 'Failed to report found device')
-    } finally {
-      setReporting(false)
-    }
+      setSubmitting(true)
+      const payload = { deviceId: deviceData?.id, imei: imei || deviceData?.imei, serial: serial || deviceData?.serial, ...form, reportedBy: user?.id || 'anonymous' }
+      const token = localStorage.getItem('auth_token')
+      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/devices/found`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Failed to submit report')
+      setStep('success')
+      showSuccess('Thank you for reporting a found device!')
+    } catch (err: any) { showError(err.message) }
+    finally { setSubmitting(false) }
   }
 
   return (
     <Layout>
-      <div className="found-device-page">
-        <div className="page-header">
-          <h1>Found a Device?</h1>
-          <p>Help reunite lost or stolen devices with their owners by reporting your find</p>
-        </div>
-
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          {/* Step 1: Check Device */}
-          <div className="card" style={{ marginBottom: '2rem' }}>
-            <h2>Step 1: Check Device Status</h2>
-            <p style={{ color: '#aaa', marginBottom: '1.5rem' }}>
-              First, let's check if this device has been reported as lost or stolen.
-            </p>
-
-            <form onSubmit={handleCheck}>
-              <div className="grid grid-2">
-                <div className="form-group">
-                  <label htmlFor="imei">IMEI Number</label>
-                  <input
-                    id="imei"
-                    type="text"
-                    placeholder="e.g., 123456789012345"
-                    value={imei}
-                    onChange={(e) => {
-                      setImei(e.target.value)
-                      if (e.target.value) setSerial('')
-                    }}
-                  />
+      <div className="container-fluid">
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="page-header">
+              <div className="d-flex align-items-center gap-3">
+                <button className="btn-ghost d-inline-flex align-items-center gap-2" onClick={() => navigate(-1)}><ArrowLeft size={18} /> Back</button>
+                <div className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--success-500), var(--success-700))' }}>
+                  <Search size={24} className="text-white" />
                 </div>
-
-                <div className="form-group">
-                  <label htmlFor="serial">Serial Number</label>
-                  <input
-                    id="serial"
-                    type="text"
-                    placeholder="e.g., ABC123456789"
-                    value={serial}
-                    onChange={(e) => {
-                      setSerial(e.target.value)
-                      if (e.target.value) setImei('')
-                    }}
-                  />
+                <div>
+                  <h1>Found a Device</h1>
+                  <p>Help return a lost device to its owner</p>
                 </div>
               </div>
-
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={checking || (!imei && !serial)}
-              >
-                {checking ? <ButtonLoading /> : '🔍 Check Device Status'}
-              </button>
-            </form>
-          </div> 
-         {/* Check Result */}
-          {checkResult && (
-            <div className="card" style={{ marginBottom: '2rem' }}>
-              <h3>Device Status Result</h3>
-              
-              {checkResult.status === 'stolen' && (
-                <div className="alert alert-error">
-                  <strong>⚠️ STOLEN DEVICE ALERT</strong>
-                  <p>This device has been reported as stolen.</p>
-                  {checkResult.case_id && <p><strong>Case ID:</strong> {checkResult.case_id}</p>}
-                </div>
-              )}
-
-              {checkResult.status === 'lost' && (
-                <div className="alert alert-warning">
-                  <strong>📱 LOST DEVICE</strong>
-                  <p>This device has been reported as lost.</p>
-                  {checkResult.case_id && <p><strong>Case ID:</strong> {checkResult.case_id}</p>}
-                </div>
-              )}
-
-              {checkResult.status === 'clean' && (
-                <div className="alert alert-success">
-                  <strong>✅ Clean Device</strong>
-                  <p>This device has no active reports.</p>
-                </div>
-              )}
-
-              {checkResult.status === 'not_found' && (
-                <div className="alert alert-info">
-                  <strong>📋 Device Not Registered</strong>
-                  <p>This device is not in our system.</p>
-                </div>
-              )}
             </div>
-          )}
-
-          {/* Step 2: Report Found Device */}
-          <div className="card">
-            <h2>Step 2: Report Found Device</h2>
-            <form onSubmit={handleReport}>
-              <div className="form-group">
-                <label htmlFor="location">Location Found *</label>
-                <input
-                  id="location"
-                  type="text"
-                  required
-                  placeholder="e.g., Central Park, NYC"
-                  value={reportData.location}
-                  onChange={(e) => setReportData(prev => ({ ...prev, location: e.target.value }))}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="description">Description</label>
-                <textarea
-                  id="description"
-                  placeholder="Describe where you found it..."
-                  value={reportData.description}
-                  onChange={(e) => setReportData(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="finder-contact">Your Contact Information *</label>
-                <input
-                  id="finder-contact"
-                  type="text"
-                  required
-                  placeholder="Email or phone number"
-                  value={reportData.finder_contact}
-                  onChange={(e) => setReportData(prev => ({ ...prev, finder_contact: e.target.value }))}
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={reporting || !reportData.location || !reportData.finder_contact}
-              >
-                {reporting ? <ButtonLoading /> : '📝 Report Found Device'}
-              </button>
-            </form>
           </div>
         </div>
 
+        <div className="row justify-content-center">
+          <div className="col-lg-8">
+            {step === 'lookup' && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                <div className="modern-card p-4 p-md-5">
+                  <div className="text-center mb-4">
+                    <div className="d-flex align-items-center justify-content-center rounded-circle mx-auto mb-3" style={{ width: 72, height: 72, background: 'var(--success-50)' }}>
+                      <Smartphone size={36} style={{ color: 'var(--success-500)' }} />
+                    </div>
+                    <h4>Look Up the Device</h4>
+                    <p style={{ color: 'var(--text-secondary)' }}>Enter the IMEI or serial number found on the device</p>
+                  </div>
+                  <div className="row g-3 mb-4">
+                    <div className="col-md-6">
+                      <label className="form-label">IMEI Number</label>
+                      <input className="modern-input" placeholder="15-digit IMEI" value={imei} onChange={e => setImei(e.target.value.replace(/\D/g, '').slice(0, 15))} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label">Serial Number</label>
+                      <input className="modern-input" placeholder="Serial number" value={serial} onChange={e => setSerial(e.target.value)} />
+                    </div>
+                  </div>
+                  <button className="btn-gradient-primary w-100 d-flex align-items-center justify-content-center gap-2 py-3" disabled={loading || (!imei && !serial)} onClick={handleLookup}>
+                    {loading ? <Loader2 size={20} className="spinner-border" /> : <Search size={20} />}
+                    {loading ? 'Looking up...' : 'Look Up Device'}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 'details' && deviceData && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                <div className="modern-card p-4 mb-4">
+                  <div className="d-flex align-items-center gap-3 mb-4">
+                    <div className="avatar" style={{ background: 'var(--success-50)' }}><Smartphone size={24} style={{ color: 'var(--success-500)' }} /></div>
+                    <div>
+                      <h5 className="mb-1">{deviceData.brand} {deviceData.model}</h5>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>IMEI: {deviceData.imei || imei || '—'} &middot; Serial: {deviceData.serial || serial || '—'}</p>
+                    </div>
+                  </div>
+                  <div className="alert-banner alert-banner-info d-flex align-items-center gap-2">
+                    <Smartphone size={18} />
+                    <span>Device found in registry. Please provide details about where you found it.</span>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmit}>
+                  <div className="modern-card p-4 mb-4">
+                    <h5 className="mb-4 d-flex align-items-center gap-2"><MapPin size={20} style={{ color: 'var(--success-500)' }} /> Where did you find it?</h5>
+                    <div className="row g-3">
+                      <div className="col-12">
+                        <label className="form-label">Location *</label>
+                        <textarea className="modern-textarea" rows={2} placeholder="e.g. Found at Central Park, near the main entrance" value={form.location} onChange={e => setForm(p => ({ ...p, location: e.target.value }))} required />
+                      </div>
+                      <div className="col-12">
+                        <label className="form-label">Description</label>
+                        <textarea className="modern-textarea" rows={3} placeholder="Any additional details about the device condition or circumstances" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modern-card p-4 mb-4">
+                    <h5 className="mb-4 d-flex align-items-center gap-2"><MessageSquare size={20} style={{ color: 'var(--success-500)' }} /> Your Contact Info</h5>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 13 }} className="mb-3">So the owner can reach you to arrange return</p>
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <label className="form-label">Name *</label>
+                        <input className="modern-input" placeholder="Your name" value={form.contactName} onChange={e => setForm(p => ({ ...p, contactName: e.target.value }))} required />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Email *</label>
+                        <input type="email" className="modern-input" placeholder="your@email.com" value={form.contactEmail} onChange={e => setForm(p => ({ ...p, contactEmail: e.target.value }))} required />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Phone</label>
+                        <input className="modern-input" placeholder="Phone number" value={form.contactPhone} onChange={e => setForm(p => ({ ...p, contactPhone: e.target.value }))} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modern-card p-4">
+                    <div className="d-flex justify-content-between">
+                      <button type="button" className="btn-ghost" onClick={() => setStep('lookup')}>Back</button>
+                      <button type="submit" className="btn-gradient-primary d-flex align-items-center gap-2" disabled={submitting}>
+                        {submitting ? <Loader2 size={18} className="spinner-border" /> : <Send size={18} />}
+                        {submitting ? 'Submitting...' : 'Submit Found Report'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+
+            {step === 'success' && (
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                <div className="modern-card p-5 text-center">
+                  <div className="d-flex align-items-center justify-content-center rounded-circle mx-auto mb-4" style={{ width: 80, height: 80, background: 'var(--success-50)' }}>
+                    <CheckCircle size={48} style={{ color: 'var(--success-500)' }} />
+                  </div>
+                  <h3>Report Submitted!</h3>
+                  <p style={{ color: 'var(--text-secondary)' }}>Thank you for helping return this device. The owner will be notified.</p>
+                  <div className="d-flex gap-3 justify-content-center mt-4">
+                    <button className="btn-gradient-primary" onClick={() => { setStep('lookup'); setImei(''); setSerial(''); setDeviceData(null); setForm({ location: '', description: '', contactName: '', contactEmail: '', contactPhone: '' }) }}>
+                      Report Another
+                    </button>
+                    <button className="btn-outline-primary" onClick={() => navigate('/')}>Go Home</button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>
     </Layout>
