@@ -34,7 +34,10 @@ server/jest-results/
 # IDE
 .vscode/
 test/
-
+*.md
+!/README.md
+*.txt
+*.docx
 ARCHITECTURE_AND_FLOW.md
 BACKEND_STATUS.md
 COMPLETE_PROJECT_DOCUMENTATION.md
