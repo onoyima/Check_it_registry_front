@@ -9,6 +9,7 @@ import {
 import { Layout } from '../components/Layout'
 import { useToast, ToastContainer } from '../components/Toast'
 import { apiClient } from '../lib/apiClient'
+import { getDisplayName, getUserInitials } from '../utils/userHelpers'
 
 type CheckRecord = {
   check?: {
@@ -26,7 +27,7 @@ type CheckRecord = {
     longitude?: number
     location_accuracy?: number
   } | null
-  checker?: { id?: string; name?: string; email?: string } | null
+  checker?: { id?: string; name?: string; email?: string; first_name?: string; middle_name?: string; last_name?: string } | null
   device?: { id?: string; brand?: string; model?: string; imei?: string; serial?: string; status?: string } | null
 }
 
@@ -391,10 +392,10 @@ export default function DeviceCheckReport() {
                         </div>
                         <div className="d-flex align-items-center gap-3 mb-3">
                           <div className="avatar" style={{ background: 'linear-gradient(135deg, var(--primary-400), var(--primary-600))' }}>
-                            {(record.checker?.name || 'A').charAt(0).toUpperCase()}
+                            {getUserInitials(record.checker) || 'A'}
                           </div>
                           <div>
-                            <p className="fw-medium mb-0">{record.checker?.name || 'Anonymous'}</p>
+                            <p className="fw-medium mb-0">{getDisplayName(record.checker) || 'Anonymous'}</p>
                             <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{record.checker?.email || '—'}</p>
                           </div>
                         </div>

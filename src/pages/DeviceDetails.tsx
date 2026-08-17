@@ -5,6 +5,7 @@ import { Layout } from '../components/Layout'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast, ToastContainer } from '../components/Toast'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { getDisplayName } from '../utils/userHelpers'
 
 type Device = {
   id: string
@@ -20,7 +21,7 @@ type Device = {
   purchaseDate: string
   estimatedValue: number
   created_at: string
-  owner?: { id: string; name: string; email: string }
+  owner?: { id: string; name: string; email: string; first_name?: string; middle_name?: string; last_name?: string }
 }
 
 export default function DeviceDetails() {
@@ -207,7 +208,7 @@ export default function DeviceDetails() {
 
               {device.owner && device.owner.id !== user?.id && (
                 <div className="modern-card p-3 mt-3">
-                  <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Owner: {device.owner.name} ({device.owner.email})</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Owner: {getDisplayName(device.owner)} ({device.owner.email})</p>
                 </div>
               )}
             </motion.div>

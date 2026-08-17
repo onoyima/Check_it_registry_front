@@ -63,7 +63,7 @@ export function PaymentGate({ isOpen, onClose, feeType, feeLabel, description, o
         >
           <motion.div
             className="modal-content"
-            style={{ maxWidth: 440 }}
+            style={{ maxWidth: 440, width: '90%' }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}

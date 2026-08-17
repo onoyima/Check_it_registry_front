@@ -5,6 +5,8 @@ import { Layout } from '../components/Layout'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
+import { getUserInitials } from '../utils/userHelpers'
+import { apiClient } from '../lib/apiClient'
 
 interface AuditLog {
   id: string
@@ -178,12 +180,6 @@ export default function AuditTrail() {
 
   const formatAction = (action: string) => action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(' ')
-    if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
-    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
-  }
-
   if (loading) {
     return (
       <Layout requireAuth allowedRoles={['admin', 'super_admin']}>
@@ -215,7 +211,7 @@ export default function AuditTrail() {
                   <option value="90d">Last 90 days</option>
                 </select>
                 <button onClick={loadAuditData} className="btn-ghost"><RefreshCw size={18} /> Refresh</button>
-                <button className="btn-ghost"><Download size={18} /> Export</button>
+                <button className="btn-ghost" onClick={() => window.open(apiClient.dataExport.download('audit'), '_blank')}><Download size={18} /> Export</button>
               </div>
             </div>
           </motion.div>
@@ -328,7 +324,7 @@ export default function AuditTrail() {
                           <div className="d-flex align-items-start gap-3">
                             <div className="position-relative flex-shrink-0" style={{ width: 40, height: 40 }}>
                               <div className="avatar" style={{ background: 'linear-gradient(135deg, var(--primary-400), var(--primary-600))' }}>
-                                {getInitials(log.user_name)}
+                                {getUserInitials({ name: log.user_name })}
                               </div>
                               <span className="position-absolute rounded-circle" style={{ width: 10, height: 10, right: -1, bottom: -1, border: '2px solid var(--bg-primary)', backgroundColor: getStatusColor(log.status) }} />
                             </div>
@@ -382,7 +378,7 @@ export default function AuditTrail() {
       <AnimatePresence>
         {showDetails && selectedLog && (
           <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="modal-content" style={{ maxWidth: 560 }}
+            <motion.div className="modal-content" style={{ maxWidth: 560, width: '90%' }}
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="modal-header">
                 <h3>Audit Log Details</h3>
@@ -422,7 +418,7 @@ export default function AuditTrail() {
                   </div>
                   <div className="col-12">
                     <label className="form-label">User Agent</label>
-                    <p style={{ color: 'var(--text-tertiary)', fontSize: 14 }}>{selectedLog.user_agent}</p>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: 14, wordBreak: 'break-all' }}>{selectedLog.user_agent}</p>
                   </div>
                 </div>
               </div>

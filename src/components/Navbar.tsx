@@ -21,10 +21,14 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useCart } from '../contexts/CartContext';
+import { getDisplayName, getUserInitials } from '../utils/userHelpers';
 
 interface UserData {
   id: string;
   name: string;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
   email: string;
   role: string;
   profile_image_url?: string;
@@ -78,15 +82,6 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
       return () => { document.body.style.overflow = prev; };
     }
   }, [isMobileMenuOpen]);
-
-  const getUserInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
 
   const handleLogout = () => {
     setIsProfileOpen(false);
@@ -205,7 +200,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       className="position-absolute end-0 mt-2 modern-card shadow-lg"
-                      style={{ width: '320px', zIndex: 99999 }}
+                      style={{ width: 'min(320px, 90vw)', zIndex: 99999 }}
                     >
                       <div className="p-4 border-bottom" style={{ borderBottomColor: 'var(--border-color)' }}>
                         <h6 className="mb-0 fw-semibold" style={{ color: 'var(--text-primary)' }}>Notifications</h6>
@@ -226,16 +221,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
                   type="button"
                 >
                   {user.profile_image_url ? (
-                    <img src={user.profile_image_url} alt={user.name} className="rounded-circle" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
-                  ) : (
-                    <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-semibold" style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%)', fontSize: '14px' }}>
-                      {getUserInitials(user.name)}
-                    </div>
-                  )}
-                  <div className="d-none d-md-block text-start">
-                    <div className="fw-medium" style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.2 }}>{user.name}</div>
+                    <img src={user.profile_image_url} alt={getDisplayName(user)} className="rounded-circle" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
+                      ) : (
+                        <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: '32px', height: '32px', background: 'var(--primary)', color: 'white', fontSize: '12px', fontWeight: 600 }}>
+                      {getUserInitials(user)}
+                      </div>
+                    )}
+                    <div className="fw-medium" style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.2 }}>{getDisplayName(user)}</div>
                     <div className="text-capitalize" style={{ color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.2 }}>{user.role}</div>
-                  </div>
                   <ChevronDown size={14} style={{ color: 'var(--text-secondary)' }} />
                 </button>
                 <AnimatePresence>
@@ -245,19 +238,19 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       className="position-absolute end-0 mt-2 modern-card shadow-lg"
-                      style={{ width: '256px', zIndex: 99999 }}
+                      style={{ width: 'min(256px, 85vw)', zIndex: 99999 }}
                     >
                       <div className="p-4 border-bottom" style={{ borderBottomColor: 'var(--border-color)' }}>
                         <div className="d-flex align-items-center gap-3">
                           {user.profile_image_url ? (
-                            <img src={user.profile_image_url} alt={user.name} className="rounded-circle" style={{ width: '48px', height: '48px', objectFit: 'cover' }} />
+                            <img src={user.profile_image_url} alt={getDisplayName(user)} className="rounded-circle" style={{ width: '48px', height: '48px', objectFit: 'cover' }} />
                           ) : (
                             <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-semibold" style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%)' }}>
-                              {getUserInitials(user.name)}
+                              {getUserInitials(user)}
                             </div>
                           )}
                           <div>
-                            <div className="fw-semibold" style={{ color: 'var(--text-primary)' }}>{user.name}</div>
+                            <div className="fw-semibold" style={{ color: 'var(--text-primary)' }}>{getDisplayName(user)}</div>
                             <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{user.email}</div>
                             <span className="badge text-capitalize mt-1" style={{ backgroundColor: 'rgba(14, 165, 233, 0.1)', color: 'var(--primary-800)', fontSize: '12px' }}>{user.role}</span>
                           </div>

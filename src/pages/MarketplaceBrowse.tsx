@@ -10,6 +10,7 @@ import {
   ChevronLeft, ChevronRight, RefreshCw, X, Package, FilterX, ShoppingCart
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { getDisplayName, getUserInitials } from '../utils/userHelpers'
 
 type Listing = {
   id: string
@@ -105,7 +106,7 @@ export default function MarketplaceBrowse() {
           description: l.description,
           created_at: l.created_at,
           seller: {
-            name: l.seller?.name || 'Unknown',
+            name: getDisplayName(l.seller) || 'Unknown',
             verified: l.seller?.verified,
             rating: 5.0,
           },
@@ -430,16 +431,16 @@ export default function MarketplaceBrowse() {
                               {l.seller && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingTop: 8, borderTop: '1px solid var(--border-color)', marginTop: 'auto' }}>
                                   <div className="avatar avatar-sm" style={{ background: 'var(--primary-500)', fontSize: 11 }}>
-                                    {l.seller.name.charAt(0)}
+                                    {getUserInitials(l.seller)}
                                   </div>
-                                  <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{l.seller.name}</span>
+                                  <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{getDisplayName(l.seller)}</span>
                                   {l.verified && <BadgeCheck size={14} style={{ color: 'var(--success-500)' }} />}
                                 </div>
                               )}
                               <button
                                 className="btn btn-sm d-flex align-items-center justify-content-center gap-1 w-100 mt-2"
                                 style={{ background: 'var(--primary-500)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontWeight: 600, fontSize: 13 }}
-                                onClick={(e) => { e.stopPropagation(); addItem({ id: l.id, title: l.title, price: l.price, currency: l.currency, image: l.thumbnail || '', seller_id: '', seller_name: l.seller?.name || '', condition: l.condition, location: l.location }); showSuccess('Added to cart!') }}
+                                onClick={(e) => { e.stopPropagation(); addItem({ id: l.id, title: l.title, price: l.price, currency: l.currency, image: l.thumbnail || '', seller_id: '', seller_name: getDisplayName(l.seller) || '', condition: l.condition, location: l.location }); showSuccess('Added to cart!') }}
                               >
                                 <ShoppingCart size={14} /> Add to Cart
                               </button>
@@ -484,7 +485,7 @@ export default function MarketplaceBrowse() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 32 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 32 }}>
                     <button
                       className="btn btn-outline-secondary btn-sm"
                       disabled={currentPage === 1}

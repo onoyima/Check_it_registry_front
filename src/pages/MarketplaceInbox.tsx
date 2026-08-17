@@ -7,6 +7,7 @@ import {
   ChevronRight, Clock
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { getUserInitials } from '../utils/userHelpers'
 
 interface InboxMessage {
   id: string
@@ -78,11 +79,6 @@ export default function MarketplaceInbox() {
     if (s) list = list.filter(i => [i.subject, i.message, i.device_title || '', i.from_name].some(v => v.toLowerCase().includes(s)))
     return list
   }, [items, filter, search])
-
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(' ')
-    return ((parts[0]?.charAt(0) || '') + (parts[1]?.charAt(0) || '')).toUpperCase() || '?'
-  }
 
   const timeAgo = (iso: string) => {
     const diff = Date.now() - new Date(iso).getTime()
@@ -183,7 +179,7 @@ export default function MarketplaceInbox() {
                           background: m.online ? 'var(--primary-500)' : 'var(--gray-400)',
                         }}
                       >
-                        {getInitials(m.from_name)}
+                        {getUserInitials({ name: m.from_name })}
                       </div>
                       {m.online && (
                         <span

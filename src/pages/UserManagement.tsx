@@ -3,10 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Search, Filter, Edit3, Shield, MapPin, UserCheck, UserX, RefreshCw, Mail, Phone, Smartphone, FileText, X, Save, AlertTriangle } from 'lucide-react'
 import { Layout } from '../components/Layout'
 import { useToast } from '../components/Toast'
+import { getDisplayName, getUserInitials } from '../utils/userHelpers'
 
 interface User {
   id: string
   name: string
+  first_name?: string
+  middle_name?: string
+  last_name?: string
   email: string
   role: 'user' | 'business' | 'admin' | 'lea'
   region?: string
@@ -56,7 +60,7 @@ export default function UserManagement() {
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [userDetails, setUserDetails] = useState<any | null>(null)
-  const [editForm, setEditForm] = useState<{ name: string; email: string; phone?: string; region?: string; role: User['role'] } | null>(null)
+  const [editForm, setEditForm] = useState<{ name: string; first_name?: string; middle_name?: string; last_name?: string; email: string; phone?: string; region?: string; role: User['role'] } | null>(null)
   const [savingEdits, setSavingEdits] = useState(false)
   const [showConfirmSave, setShowConfirmSave] = useState(false)
   const [showConfirmReset, setShowConfirmReset] = useState(false)
@@ -78,7 +82,8 @@ export default function UserManagement() {
       const data = await response.json()
       const apiUsers = (data.users || []) as any[]
       const mappedUsers: User[] = apiUsers.map(u => ({
-        id: u.id, name: u.name, email: u.email,
+        id: u.id, name: u.name, first_name: u.first_name, middle_name: u.middle_name, last_name: u.last_name,
+        email: u.email,
         role: (u.role || 'user') as User['role'],
         region: u.region || undefined, phone: u.phone || undefined,
         verified_at: u.verified_at || undefined, created_at: u.created_at,
@@ -104,19 +109,13 @@ export default function UserManagement() {
     }
   }
 
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(' ')
-    if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
-    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
-  }
-
   const isOnline = (user: User) => {
     if (!user.last_login_at || user.status !== 'active') return false
     return Date.now() - new Date(user.last_login_at).getTime() < 30 * 60 * 1000
   }
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = getDisplayName(user).toLowerCase().includes(searchTerm.toLowerCase()) || user.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = roleFilter === 'all' || user.role === roleFilter
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter
     return matchesSearch && matchesRole && matchesStatus
@@ -188,7 +187,7 @@ export default function UserManagement() {
 
   const openEditModal = (user: User) => {
     setSelectedUser(user)
-    setEditForm({ name: user.name, email: user.email, phone: user.phone, region: user.region, role: user.role })
+    setEditForm({ name: user.name, first_name: user.first_name, middle_name: user.middle_name, last_name: user.last_name, email: user.email, phone: user.phone, region: user.region, role: user.role })
     setShowUserModal(true)
   }
 
@@ -219,7 +218,7 @@ export default function UserManagement() {
         })
         if (!resp.ok) throw new Error('Failed to save user details')
       }
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, name: editForm.name, email: editForm.email, phone: editForm.phone, region: editForm.region, role: editForm.role } : u))
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, name: editForm.name || getDisplayName(editForm), first_name: editForm.first_name, middle_name: editForm.middle_name, last_name: editForm.last_name, email: editForm.email, phone: editForm.phone, region: editForm.region, role: editForm.role } : u))
       showSuccess('Saved', 'User information updated successfully')
       setShowUserModal(false)
     } catch (err) {
@@ -382,16 +381,16 @@ export default function UserManagement() {
                           <div className="d-flex align-items-center gap-3">
                             <div className="position-relative flex-shrink-0" style={{ width: 40, height: 40 }}>
                               {user.avatar_url ? (
-                                <img src={user.avatar_url} alt={user.name} className="rounded-circle object-fit-cover" style={{ width: 40, height: 40, border: '2px solid var(--border-color)' }} />
+                                <img src={user.avatar_url} alt={getDisplayName(user)} className="rounded-circle object-fit-cover" style={{ width: 40, height: 40, border: '2px solid var(--border-color)' }} />
                               ) : (
                                 <div className="avatar" style={{ background: 'linear-gradient(135deg, var(--primary-400), var(--primary-600))' }}>
-                                  {getInitials(user.name)}
+                                  {getUserInitials(user)}
                                 </div>
                               )}
                               <span className="position-absolute rounded-circle" style={{ width: 10, height: 10, right: -1, bottom: -1, border: '2px solid var(--bg-primary)', backgroundColor: isOnline(user) ? 'var(--success-500)' : 'var(--gray-400)' }} />
                             </div>
                             <div>
-                              <div className="fw-medium" style={{ color: 'var(--text-primary)' }}>{user.name}</div>
+                              <div className="fw-medium" style={{ color: 'var(--text-primary)' }}>{getDisplayName(user)}</div>
                               <small style={{ color: 'var(--text-tertiary)' }}>{user.email}</small>
                               {user.region && (
                                 <div className="d-flex align-items-center gap-1 mt-1">
@@ -466,10 +465,10 @@ export default function UserManagement() {
       <AnimatePresence>
         {showUserModal && selectedUser && (
           <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="modal-content" style={{ maxWidth: 540 }}
+            <motion.div className="modal-content" style={{ maxWidth: 540, width: '90%' }}
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="modal-header">
-                <h3>Edit User: {selectedUser.name}</h3>
+                <h3>Edit User: {getDisplayName(selectedUser)}</h3>
                 <button onClick={() => setShowUserModal(false)} className="btn-ghost p-1"><X size={20} /></button>
               </div>
               <div className="modal-body">
@@ -522,10 +521,10 @@ export default function UserManagement() {
       <AnimatePresence>
         {showDetailsModal && selectedUser && (
           <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="modal-content" style={{ maxWidth: 640 }}
+            <motion.div className="modal-content" style={{ maxWidth: 640, width: '90%' }}
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="modal-header">
-                <h3>User Details: {selectedUser.name}</h3>
+                  <h3>User Details: {getDisplayName(selectedUser)}</h3>
                 <button onClick={() => setShowDetailsModal(false)} className="btn-ghost p-1"><X size={20} /></button>
               </div>
               <div className="modal-body">
@@ -535,10 +534,10 @@ export default function UserManagement() {
                   <div className="d-flex flex-column gap-4">
                     <div className="d-flex align-items-center gap-3 pb-3 border-bottom" style={{ borderColor: 'var(--border-color)' }}>
                       <div className="avatar avatar-lg" style={{ background: 'linear-gradient(135deg, var(--primary-400), var(--primary-600))' }}>
-                        {getInitials(userDetails.user.name || selectedUser.name)}
+                        {getUserInitials(userDetails?.user || selectedUser)}
                       </div>
                       <div>
-                        <h4 className="mb-1" style={{ color: 'var(--text-primary)' }}>{userDetails.user.name || selectedUser.name}</h4>
+                        <h4 className="mb-1" style={{ color: 'var(--text-primary)' }}>{getDisplayName(userDetails?.user || selectedUser)}</h4>
                         <span className="status-badge" style={{ backgroundColor: `${getRoleColor(userDetails.user.role)}15`, color: getRoleColor(userDetails.user.role), border: `1px solid ${getRoleColor(userDetails.user.role)}30` }}>
                           {getRoleBadge(userDetails.user.role)}
                         </span>
@@ -591,7 +590,7 @@ export default function UserManagement() {
       <AnimatePresence>
         {showConfirmReset && (
           <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ zIndex: 1060 }}>
-            <motion.div className="modal-content" style={{ maxWidth: 420 }}
+            <motion.div className="modal-content" style={{ maxWidth: 420, width: '90%' }}
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="modal-header">
                 <h3>Confirm Password Reset</h3>
@@ -599,7 +598,7 @@ export default function UserManagement() {
               </div>
               <div className="modal-body">
                 <p style={{ color: 'var(--text-tertiary)' }}>
-                  Are you sure you want to reset the password for <strong style={{ color: 'var(--text-primary)' }}>{users.find(u => u.id === resetUserId)?.name || 'this user'}</strong>?
+                  Are you sure you want to reset the password for <strong style={{ color: 'var(--text-primary)' }}>{getDisplayName(users.find(u => u.id === resetUserId)) || 'this user'}</strong>?
                 </p>
               </div>
               <div className="modal-footer">
@@ -618,17 +617,17 @@ export default function UserManagement() {
       <AnimatePresence>
         {showConfirmSave && showUserModal && selectedUser && editForm && (
           <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ zIndex: 1060 }}>
-            <motion.div className="modal-content" style={{ maxWidth: 420 }}
+            <motion.div className="modal-content" style={{ maxWidth: 420, width: '90%' }}
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="modal-header">
                 <h3>Confirm Save Changes</h3>
                 <button onClick={() => setShowConfirmSave(false)} className="btn-ghost p-1"><X size={20} /></button>
               </div>
               <div className="modal-body">
-                <p style={{ color: 'var(--text-tertiary)' }}>Save updates for <strong style={{ color: 'var(--text-primary)' }}>{selectedUser.name}</strong>?</p>
-                {(editForm.name !== selectedUser.name || editForm.email !== selectedUser.email || editForm.role !== selectedUser.role) && (
+                <p style={{ color: 'var(--text-tertiary)' }}>Save updates for <strong style={{ color: 'var(--text-primary)' }}>{getDisplayName(selectedUser)}</strong>?</p>
+                {(getDisplayName(editForm) !== getDisplayName(selectedUser) || editForm.email !== selectedUser.email || editForm.role !== selectedUser.role) && (
                   <ul className="mb-0" style={{ color: 'var(--text-tertiary)', fontSize: 14 }}>
-                    {editForm.name !== selectedUser.name && <li>Name: {selectedUser.name} &rarr; {editForm.name}</li>}
+                    {getDisplayName(editForm) !== getDisplayName(selectedUser) && <li>Name: {getDisplayName(selectedUser)} &rarr; {getDisplayName(editForm)}</li>}
                     {editForm.email !== selectedUser.email && <li>Email: {selectedUser.email} &rarr; {editForm.email}</li>}
                     {editForm.role !== selectedUser.role && <li>Role: {selectedUser.role} &rarr; {editForm.role}</li>}
                   </ul>

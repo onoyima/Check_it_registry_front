@@ -112,7 +112,7 @@ export default function BuyerOrders() {
     <Layout requireAuth>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="container-fluid">
-        <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
           <div>
             <h3 className="mb-1" style={{ fontWeight: 600 }}>My Orders</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Track purchases and confirm delivery</p>

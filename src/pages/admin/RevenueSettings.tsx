@@ -83,12 +83,7 @@ export default function RevenueSettings() {
       const amount = isPercent ? parseFloat(editValue) : parseFloat(editValue)
       if (isNaN(amount) || amount < 0) throw new Error('Invalid amount')
       if (isPercent && amount > 100) throw new Error('Commission cannot exceed 100%')
-      await apiClient.revenue.setFee(key, {
-        fee_type: key.replace('_fee', '').replace('_percent', ''),
-        amount,
-        currency: isPercent ? undefined : 'NGN',
-        description: FEE_LABELS[key]?.desc || '',
-      })
+      await apiClient.revenue.setFee(key, amount)
       setFees(prev => ({ ...prev, [key]: { ...prev[key], setting_value: String(amount) } }))
       showSuccess(`${FEE_LABELS[key]?.label || key} updated`)
       setEditingKey(null)

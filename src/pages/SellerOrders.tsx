@@ -30,7 +30,8 @@ export default function SellerOrders() {
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true)
-      const data = await apiClient.marketplace.getSellerOrders()
+      const res = await apiClient.marketplace.getSellerOrders()
+      const data = res.data || res
       const mapped = data.map((o: any) => ({
         id: o.id,
         product: `${o.brand} ${o.model}`,

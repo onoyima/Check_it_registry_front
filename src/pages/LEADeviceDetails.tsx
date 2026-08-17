@@ -41,7 +41,7 @@ export default function LEADeviceDetails() {
   return (
     <Layout requireAuth allowedRoles={["lea", "admin"]}>
       <div className="container py-3">
-        <div className="d-flex align-items-center justify-content-between mb-3">
+        <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3 mb-3">
           <h1 className="h5 m-0">LEA Device Details</h1>
           <div className="d-flex gap-2">
             <Link to="/lea/cases" className="btn btn-outline-secondary btn-sm">Back to Cases</Link>

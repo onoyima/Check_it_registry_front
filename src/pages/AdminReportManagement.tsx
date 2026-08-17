@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Layout } from '../components/Layout'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Search, Filter, FileText, X } from 'lucide-react'
+import { getDisplayName } from '../utils/userHelpers'
 
 type AdminReportItem = {
   id: number; case_id: string; report_type: string; status: string
@@ -245,7 +246,7 @@ export default function AdminReportManagement() {
       <AnimatePresence>
         {showAssign && (
           <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="modal-content" style={{ maxWidth: 480 }}
+            <motion.div className="modal-content" style={{ maxWidth: 480, width: '90%' }}
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="modal-header">
                 <h3>Assign LEA Officer</h3>
@@ -259,7 +260,7 @@ export default function AdminReportManagement() {
                     <button key={u.id} onClick={() => assignLeaById(showAssign.reportId, u.id)}
                       className="btn-ghost w-100 justify-content-between text-start p-3" style={{ borderRadius: 12, background: 'var(--bg-tertiary)' }}>
                       <div>
-                        <div className="fw-medium" style={{ color: 'var(--text-primary)' }}>{u.name}</div>
+                        <div className="fw-medium" style={{ color: 'var(--text-primary)' }}>{getDisplayName(u)}</div>
                         <small style={{ color: 'var(--text-tertiary)' }}>{u.email}</small>
                       </div>
                       {u.badge_number && (

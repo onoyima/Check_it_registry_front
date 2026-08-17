@@ -226,7 +226,7 @@ export default function FraudAlerts() {
 
       {selectedAlert && (
         <div className="modal-overlay" onClick={() => setSelectedAlert(null)}>
-          <div className="modal-content" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: 560, width: '90%' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Alert Details</h3>
               <button onClick={() => setSelectedAlert(null)} className="btn-ghost p-1"><XCircle size={20} /></button>

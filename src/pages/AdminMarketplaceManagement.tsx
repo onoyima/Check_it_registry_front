@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout'
 import { apiClient } from '../lib/apiClient'
 import { Search, Filter, Ban, CheckCircle, Star, StarOff, Tag, X, RefreshCw } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { getDisplayName } from '../utils/userHelpers'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -138,7 +139,7 @@ export default function AdminMarketplaceManagement() {
                         </td>
                         <td><span className="fw-medium" style={{ color: 'var(--text-primary)' }}>{l.currency} {l.price?.toLocaleString()}</span></td>
                         <td>
-                          <div className="fw-medium" style={{ color: 'var(--text-primary)' }}>{l.seller?.name}</div>
+                          <div className="fw-medium" style={{ color: 'var(--text-primary)' }}>{getDisplayName(l.seller)}</div>
                           <small style={{ color: 'var(--text-tertiary)' }}>{l.seller?.email}</small>
                         </td>
                         <td>{getStatusBadge(l.status)}</td>

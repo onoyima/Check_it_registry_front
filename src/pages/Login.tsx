@@ -8,6 +8,7 @@ import {
   Search, RefreshCw, Github, Chrome, ArrowLeft
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { getDisplayName } from '../utils/userHelpers'
 import OTPVerification from '../components/OTPVerification'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || ''
@@ -114,7 +115,7 @@ export default function Login() {
         showSuccess('Verification Required', 'Please check your email for a verification code.')
       } else {
         login(data.token, data.user)
-        showSuccess('Login Successful', `Welcome back, ${data.user.name || 'User'}!`)
+        showSuccess('Login Successful', `Welcome back, ${getDisplayName(data.user) || 'User'}!`)
         navigate('/dashboard', { replace: true })
       }
     } catch (err) {
@@ -160,7 +161,7 @@ export default function Login() {
 
       login(data.token, data.user)
       setShowOTPModal(false)
-      showSuccess('Login Successful', `Welcome back, ${data.user.name || 'User'}!`)
+      showSuccess('Login Successful', `Welcome back, ${getDisplayName(data.user) || 'User'}!`)
       navigate('/dashboard', { replace: true })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Verification failed. Please try again.'

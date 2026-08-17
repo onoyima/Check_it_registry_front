@@ -148,6 +148,23 @@ export default function PasswordReset() {
                             const v = e.target.value.replace(/\D/g, '').slice(-1)
                             const nc = [...code]; nc[idx] = v; setCode(nc)
                             if (v && idx < 5) (document.querySelectorAll('input[inputmode="numeric"]')[idx + 1] as HTMLInputElement)?.focus()
+                            if (nc.every(d => d !== '') && nc.join('').length === 6) {
+                              setTimeout(() => {
+                                const fullCode = nc.join('')
+                                if (fullCode.length === 6) {
+                                  setLoading(true)
+                                  fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/verify-reset-code`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ email, code: fullCode }),
+                                  }).then(res => {
+                                    if (!res.ok) throw new Error('Invalid or expired code')
+                                    setStep('reset')
+                                  }).catch((err: any) => showError(err.message))
+                                    .finally(() => setLoading(false))
+                                }
+                              }, 0)
+                            }
                           }}
                           onKeyDown={e => { if ((e.key === 'Backspace' || e.key === 'Backward') && !code[idx] && idx > 0) { const nc = [...code]; nc[idx - 1] = ''; setCode(nc); (document.querySelectorAll('input[inputmode="numeric"]')[idx - 1] as HTMLInputElement)?.focus() } }}
                           className="modern-input text-center" style={{ width: 48, height: 56, fontSize: 24, fontWeight: 700 }} />

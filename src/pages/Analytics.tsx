@@ -136,7 +136,7 @@ export default function Analytics() {
                 <h1>Analytics & Insights</h1>
                 <p>Comprehensive platform analytics and reporting</p>
               </div>
-              <div className="d-flex gap-2">
+              <div className="d-flex gap-2 flex-wrap">
                 <select className="modern-select" value={timeRange} onChange={(e) => setTimeRange(e.target.value)} style={{ width: 'auto', minWidth: 140 }}>
                   <option value="7d">Last 7 days</option>
                   <option value="30d">Last 30 days</option>

@@ -196,7 +196,7 @@ export default function LandingContentManager() {
       <AnimatePresence>
         {isModalOpen && editingItem && (
           <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="modal-content" style={{ maxWidth: 600 }}
+            <motion.div className="modal-content" style={{ maxWidth: 600, width: '90%' }}
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <form onSubmit={handleSave}>
                 <div className="modal-header">

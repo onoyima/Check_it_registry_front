@@ -388,7 +388,7 @@ export default function AdminDeviceManagement() {
       <AnimatePresence>
         {editingDeviceId && (
           <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="modal-content" style={{ maxWidth: 640 }}
+            <motion.div className="modal-content" style={{ maxWidth: 640, width: '90%' }}
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
               <div className="modal-header">
                 <h3>Edit Device</h3>

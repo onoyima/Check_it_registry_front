@@ -10,6 +10,7 @@ import {
   ChevronLeft, ChevronRight, Heart, Share2, Clock,
   Shield, Flag, Smartphone, CheckCircle, ShoppingCart
 } from 'lucide-react'
+import { getDisplayName, getUserInitials } from '../utils/userHelpers'
 
 type Listing = {
   id: string
@@ -28,6 +29,9 @@ type Listing = {
   category: string
   seller: {
     name: string
+    first_name?: string
+    middle_name?: string
+    last_name?: string
     rating: number
     verified: boolean
     joinDate: string
@@ -332,11 +336,11 @@ export default function MarketplaceListing() {
                 <div className="modern-card" style={{ padding: 16, background: 'var(--bg-secondary)', marginBottom: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div className="avatar avatar-lg" style={{ background: listing.seller.verified ? 'var(--primary-500)' : 'var(--gray-400)', fontSize: 22 }}>
-                      {listing.seller.name.charAt(0)}
+                      {getUserInitials(listing.seller)}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontWeight: 600 }}>{listing.seller.name}</span>
+                        <span style={{ fontWeight: 600 }}>{getDisplayName(listing.seller)}</span>
                         {listing.seller.verified && <BadgeCheck size={16} style={{ color: 'var(--success-500)' }} />}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-tertiary)' }}>
@@ -372,7 +376,7 @@ export default function MarketplaceListing() {
                   <button
                     className="btn d-flex align-items-center justify-content-center gap-2"
                     style={{ background: 'var(--success-500)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 20px', fontWeight: 700, fontSize: 15 }}
-                    onClick={() => { addItem({ id: listing.id, title: listing.title, price: listing.price, currency: listing.currency, image: listing.images[0], seller_id: listing.seller?.name || '', seller_name: listing.seller?.name || '', condition: listing.condition, location: listing.location }); showSuccess('Added to cart!') }}
+                    onClick={() => { addItem({ id: listing.id, title: listing.title, price: listing.price, currency: listing.currency, image: listing.images[0], seller_id: listing.seller?.name || '', seller_name: getDisplayName(listing.seller) || '', condition: listing.condition, location: listing.location }); showSuccess('Added to cart!') }}
                   >
                     <ShoppingCart size={20} /> Add to Cart
                   </button>

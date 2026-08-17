@@ -5,6 +5,7 @@ import { useToast, ToastContainer } from '../components/Toast'
 import { Loading } from '../components/Loading'
 import { ButtonLoading } from '../components/Loading'
 import { Activity, AlertTriangle, CheckCircle2, FileSearch, MapPin } from 'lucide-react'
+import { getDisplayName } from '../utils/userHelpers'
 
 interface LEAStats {
   total_cases: number
@@ -35,6 +36,9 @@ interface Case {
   device_model?: string
   device_imei?: string
   reporter_name?: string
+  reporter_first_name?: string
+  reporter_middle_name?: string
+  reporter_last_name?: string
   reporter_email?: string
   location?: string
   description?: string
@@ -212,7 +216,7 @@ export default function LEAPortal() {
   return (
     <Layout requireAuth allowedRoles={['admin', 'lea']}>
       <div className="lea-portal container py-3">
-        <div className="d-flex align-items-center justify-content-between mb-3">
+        <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3 mb-3">
           <div>
             <h1 className="h4 m-0">LEA Portal</h1>
             <small className="text-secondary">Law Enforcement Agency case management and investigation tools</small>
@@ -413,6 +417,7 @@ export default function LEAPortal() {
                   No cases found for the selected filter
                 </p>
               ) : (
+                <div className="table-responsive">
                 <table className="table">
                   <thead>
                     <tr>
@@ -444,7 +449,7 @@ export default function LEAPortal() {
                           </div>
                         </td>
                         <td>
-                          <div>{caseItem.reporter_name}</div>
+                          <div>{getDisplayName({ name: caseItem.reporter_name, first_name: caseItem.reporter_first_name, middle_name: caseItem.reporter_middle_name, last_name: caseItem.reporter_last_name })}</div>
                           <div style={{ fontSize: '0.9rem', color: '#aaa' }}>
                             {caseItem.reporter_email}
                           </div>
@@ -485,6 +490,7 @@ export default function LEAPortal() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           </div>
@@ -540,7 +546,7 @@ export default function LEAPortal() {
 
                   <div style={{ marginBottom: '1rem' }}>
                     <h4>Reporter Information</h4>
-                    <p><strong>Name:</strong> {selectedCase.reporter_name}</p>
+                    <p><strong>Name:</strong> {getDisplayName({ name: selectedCase.reporter_name, first_name: selectedCase.reporter_first_name, middle_name: selectedCase.reporter_middle_name, last_name: selectedCase.reporter_last_name })}</p>
                     <p><strong>Email:</strong> {selectedCase.reporter_email}</p>
                     <p><strong>Location:</strong> {selectedCase.location || 'Not specified'}</p>
                   </div>

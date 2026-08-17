@@ -49,15 +49,21 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
   }, [isOpen]);
 
   const handleInputChange = (index: number, value: string) => {
-    if (value.length > 1) return; // Only allow single digit
+    if (value.length > 1) return;
     
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (value && index < 5 && inputRefs.current[index + 1]) {
       inputRefs.current[index + 1]?.focus();
+    }
+
+    if (newOtp.every(d => d !== '') && newOtp.join('').length === 6) {
+      setTimeout(() => {
+        const otpString = newOtp.join('');
+        if (otpString.length === 6) onVerify(otpString, rememberDevice);
+      }, 0);
     }
   };
 
@@ -81,10 +87,16 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
     
     setOtp(newOtp);
     
-    // Focus the next empty input or the last input
     const nextEmptyIndex = newOtp.findIndex(digit => !digit);
     const focusIndex = nextEmptyIndex === -1 ? 5 : nextEmptyIndex;
     inputRefs.current[focusIndex]?.focus();
+
+    if (newOtp.every(d => d !== '') && newOtp.join('').length === 6) {
+      setTimeout(() => {
+        const otpString = newOtp.join('');
+        if (otpString.length === 6) onVerify(otpString, rememberDevice);
+      }, 0);
+    }
   };
 
   const handleSubmit = async () => {

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Layout } from '../components/Layout'
 import { useParams, Link } from 'react-router-dom'
 import { AlertTriangle, Calendar, Clock, MapPin, User, Smartphone, FileText, Edit3, Save, X, Shield } from 'lucide-react'
+import { getDisplayName } from '../utils/userHelpers'
 
 type TimelineItem = {
   id: number
@@ -139,7 +140,7 @@ export default function AdminCaseDetails() {
             <div className="col-lg-8">
               {/* Admin Notes Section */}
               <div className="modern-card p-4 mb-4">
-                <div className="d-flex align-items-center justify-content-between mb-3">
+        <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3 mb-3">
                   <div className="d-flex align-items-center gap-2">
                     <Shield size={18} />
                     <h3 className="h6 m-0">Admin Notes</h3>
@@ -313,7 +314,7 @@ export default function AdminCaseDetails() {
                 </div>
                 {data.reporter ? (
                   <div>
-                    <div className="fw-medium">{data.reporter.name}</div>
+                    <div className="fw-medium">{getDisplayName(data.reporter)}</div>
                     <div className="text-secondary" style={{ fontSize: 13 }}>{data.reporter.email}</div>
                     <div className="text-secondary" style={{ fontSize: 13 }}>ID: {data.reporter.id}</div>
                   </div>
@@ -330,7 +331,7 @@ export default function AdminCaseDetails() {
                     <h3 className="h6 m-0">Assigned Officer</h3>
                   </div>
                   <div>
-                    <div className="fw-medium">{data.lea.name}</div>
+                    <div className="fw-medium">{getDisplayName(data.lea)}</div>
                     <div className="text-secondary" style={{ fontSize: 13 }}>{data.lea.email}</div>
                     <div className="text-secondary" style={{ fontSize: 13 }}>Badge: {data.lea.badge_number || 'N/A'}</div>
                   </div>

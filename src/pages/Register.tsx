@@ -39,7 +39,9 @@ const itemVariants = {
 
 export default function Register() {
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    middleName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -63,8 +65,12 @@ export default function Register() {
   }
 
   const validateStep1 = () => {
-    if (!formData.name.trim()) {
-      setError('Full name is required')
+    if (!formData.firstName.trim()) {
+      setError('First name is required')
+      return false
+    }
+    if (!formData.lastName.trim()) {
+      setError('Last name is required')
       return false
     }
     if (!formData.email.trim()) {
@@ -113,7 +119,9 @@ export default function Register() {
 
     try {
       const { data, error: signUpError } = await apiClient.auth.signUp({
-        name: formData.name.trim(),
+        first_name: formData.firstName.trim(),
+        middle_name: formData.middleName.trim() || undefined,
+        last_name: formData.lastName.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         phone: formData.phone.trim() || undefined,
@@ -301,12 +309,36 @@ export default function Register() {
                   {step === 1 && (
                     <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
                       <div style={{ marginBottom: 20 }}>
-                        <label htmlFor="name" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <User size={14} /> Full Name <span style={{ color: 'red' }}>*</span>
+                        <label htmlFor="firstName" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <User size={14} /> First Name <span style={{ color: 'red' }}>*</span>
                         </label>
                         <div style={{ position: 'relative' }}>
-                          <input id="name" name="name" type="text" className="modern-input" placeholder="John Doe"
-                            value={formData.name} onChange={handleInputChange} required
+                          <input id="firstName" name="firstName" type="text" className="modern-input" placeholder="John"
+                            value={formData.firstName} onChange={handleInputChange} required
+                            style={{ paddingLeft: 44 }} />
+                          <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }} />
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: 20 }}>
+                        <label htmlFor="middleName" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <User size={14} /> Middle Name <span style={{ color: 'var(--text-secondary)', fontSize: '0.85em' }}>(optional)</span>
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <input id="middleName" name="middleName" type="text" className="modern-input" placeholder="Michael"
+                            value={formData.middleName} onChange={handleInputChange}
+                            style={{ paddingLeft: 44 }} />
+                          <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }} />
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: 20 }}>
+                        <label htmlFor="lastName" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <User size={14} /> Last Name <span style={{ color: 'red' }}>*</span>
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <input id="lastName" name="lastName" type="text" className="modern-input" placeholder="Doe"
+                            value={formData.lastName} onChange={handleInputChange} required
                             style={{ paddingLeft: 44 }} />
                           <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }} />
                         </div>

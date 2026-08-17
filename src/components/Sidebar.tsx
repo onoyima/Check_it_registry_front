@@ -24,6 +24,7 @@ import {
   Receipt,
   MessageSquare,
   ArrowLeftRight,
+  Archive,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -72,7 +73,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
         { path: "/register-device", label: "Register Device", icon: Smartphone },
         { path: "/my-devices", label: "My Devices", icon: Smartphone },
         { path: "/transfer", label: "Transfers", icon: ArrowLeftRight },
-        { path: "/report-missing", label: "Report Missing", icon: AlertTriangle },
         { path: "/report-incident", label: "Report Incident", icon: AlertOctagon },
         { path: "/reports", label: "My Reports", icon: FileText },
         { path: "/notifications", label: "Notifications", icon: Bell },
@@ -152,6 +152,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
         { path: "/admin/system-settings", label: "System Settings", icon: Settings },
         { path: "/admin/device-categories", label: "Device Categories", icon: Settings },
         { path: "/admin/transfers", label: "Transfers", icon: ArrowLeftRight },
+        { path: "/admin/verification-queue", label: "Verification Queue", icon: Shield },
+        { path: "/admin/archive", label: "Archive & Recovery", icon: Archive },
         { path: "/admin/landing-content", label: "Landing Content", icon: FileText },
       ],
     };

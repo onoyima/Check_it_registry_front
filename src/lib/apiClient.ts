@@ -4,6 +4,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 interface User {
   id: string;
   name: string;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
   email: string;
   role: string;
   region?: string;
@@ -141,7 +144,10 @@ class ApiClient {
   // Auth methods
   auth = {
     signUp: async (data: {
-      name: string;
+      name?: string;
+      first_name?: string;
+      middle_name?: string;
+      last_name?: string;
       email: string;
       password: string;
       phone?: string;
@@ -177,7 +183,10 @@ class ApiClient {
     // Sign up with optional profile image (multipart/form-data)
     signUpWithProfileImage: async (
       data: {
-        name: string;
+        name?: string;
+        first_name?: string;
+        middle_name?: string;
+        last_name?: string;
         email: string;
         password: string;
         phone?: string;
@@ -187,7 +196,10 @@ class ApiClient {
     ) => {
       try {
         const formData = new FormData();
-        formData.append("name", data.name);
+        if (data.first_name) formData.append("first_name", data.first_name);
+        if (data.middle_name) formData.append("middle_name", data.middle_name);
+        if (data.last_name) formData.append("last_name", data.last_name);
+        if (data.name) formData.append("name", data.name);
         formData.append("email", data.email);
         formData.append("password", data.password);
         if (data.phone) formData.append("phone", data.phone);
@@ -255,6 +267,24 @@ class ApiClient {
           error: error instanceof Error ? error : new Error("Login failed"),
         };
       }
+    },
+
+    register: async (data: {
+      name?: string; first_name?: string; middle_name?: string; last_name?: string;
+      email: string; password: string; phone?: string; region?: string;
+      role?: string; registrationNumber?: string; businessName?: string;
+      sector?: string; country?: string; city?: string; address?: string;
+    }) => {
+      const response = await this.request("/auth/register", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }) as any;
+      this.token = response.token;
+      localStorage.setItem("auth_token", response.token);
+      if (this.authCallback) {
+        this.authCallback("SIGNED_IN", { user: response.user, access_token: response.token });
+      }
+      return response;
     },
 
     signOut: async () => {
@@ -382,6 +412,7 @@ class ApiClient {
         method: "PUT",
         body: JSON.stringify(data),
       }),
+    myDevices: () => this.request('/report-management/my-devices'),
   };
 
   // Admin methods (legacy)
@@ -665,7 +696,7 @@ class ApiClient {
       fd.append('image', file);
       return this.upload('/profile/image', fd);
     },
-    update: async (data: { name?: string; phone?: string; region?: string }) => {
+    update: async (data: { name?: string; first_name?: string; middle_name?: string; last_name?: string; phone?: string; region?: string }) => {
       return this.request('/profile/update', {
         method: 'PUT',
         body: JSON.stringify(data)
@@ -762,10 +793,9 @@ class ApiClient {
   revenue = {
     getFee: (feeKey: string) => this.request(`/revenue-admin/fees/${feeKey}`),
     listFees: () => this.request('/revenue-admin/fees'),
-    setFee: (feeKey: string, data: { fee_type: string; amount: number; currency?: string; description?: string }) =>
+    setFee: (feeKey: string, value: number) =>
       this.request(`/revenue-admin/fees/${feeKey}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
+        method: 'PUT', body: JSON.stringify({ value }),
       }),
     getProvider: () => this.request('/revenue-admin/provider'),
     setProvider: (data: { provider: string; config?: any }) =>
@@ -815,8 +845,15 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    getCACHistory: () => this.request('/security/cac/history'),
+    getVerificationStatus: () => this.request('/security/cac/status'),
+    getVerificationQueue: (status: string = 'pending', page: number = 1) =>
+      this.request(`/admin/verification-queue?status=${status}&page=${page}`),
+    updateQueueItem: (id: string, status: string) =>
+      this.request(`/admin/verification-queue/${id}`, {
+        method: 'PUT', body: JSON.stringify({ status }),
+      }),
     riskCheck: () => this.request('/security/check-risk', { method: 'POST' }),
-    getVerificationStatus: () => this.request('/security/verification-status'),
   };
 
   // Fraud detection (admin)
@@ -848,6 +885,19 @@ class ApiClient {
     onboardingStats: () => this.request('/business/onboardings/stats'),
   };
 
+  // Business Registration & Profile
+  businessProfile = {
+    register: (data: {
+      businessName: string; registrationNumber: string; businessType?: string;
+      sector?: string; businessAddress?: string; businessPhone?: string;
+      businessEmail?: string; website?: string; state?: string; city?: string;
+      country?: string; expectedDeviceVolume?: string; businessDescription?: string;
+    }) => this.request('/business-profile/register', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+    getProfile: () => this.request('/business-profile/profile'),
+  };
+
   // Device Checks
   deviceChecks = {
     history: async (params: { device_id?: string; identifier?: string; limit?: number }) => {
@@ -855,6 +905,58 @@ class ApiClient {
       return this.request(`/public-check/history${query}`);
     },
     get: async (checkId: string) => this.request(`/public-check/report/${checkId}`),
+  };
+
+  // Security Questions
+  securityQuestions = {
+    get: () => this.request('/profile/security-question'),
+    setup: (data: { question: string; answer: string }) =>
+      this.request('/profile/security-question', { method: 'POST', body: JSON.stringify(data) }),
+  };
+
+  // Account Deletion (secure multi-step flow)
+  accountDeletion = {
+    verifyPassword: (password: string) =>
+      this.request('/profile/delete-account/verify-password', { method: 'POST', body: JSON.stringify({ password }) }),
+    verifySecurity: (answer: string) =>
+      this.request('/profile/delete-account/verify-security', { method: 'POST', body: JSON.stringify({ answer }) }),
+    resendOtp: () =>
+      this.request('/profile/delete-account/resend-otp', { method: 'POST' }),
+    delete: (data: { reason: string; otpCode: string; confirmText: string }) =>
+      this.request('/profile/delete-account', { method: 'POST', body: JSON.stringify(data) }),
+  };
+
+  // Data Export
+  dataExport = {
+    download: (type: string = 'full') => `/api/profile/export?type=${type}`,
+    request: (exportType: string) =>
+      this.request('/settings/data-export', { method: 'POST', body: JSON.stringify({ export_type: exportType }) }),
+    status: () => this.request('/settings/data-export/status'),
+  };
+
+  // Archive (admin)
+  archive = {
+    stats: () => this.request('/archive/stats'),
+    deletedUsers: (params?: { page?: number; search?: string }) => {
+      const q = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+      return this.request(`/archive/deleted-users${q}`);
+    },
+    deletedUserDetail: (id: string) => this.request(`/archive/deleted-users/${id}`),
+    deletedDevices: (params?: { page?: number; search?: string }) => {
+      const q = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+      return this.request(`/archive/deleted-devices${q}`);
+    },
+    deletedDeviceDetail: (id: string) => this.request(`/archive/deleted-devices/${id}`),
+    restoreUser: (archiveId: string) => this.request(`/archive/restore-user/${archiveId}`, { method: 'POST' }),
+    restoreDevice: (archiveId: string) => this.request(`/archive/restore-device/${archiveId}`, { method: 'POST' }),
+    userView: (userId: string) => this.request(`/archive/user-view/${userId}`),
+    businessView: (userId: string) => this.request(`/archive/business-view/${userId}`),
+    leaView: (userId: string) => this.request(`/archive/lea-view/${userId}`),
+    deviceLifecycle: (deviceId: string) => this.request(`/archive/device-lifecycle/${deviceId}`),
+    exportAudit: (params?: { page?: number }) => {
+      const q = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+      return this.request(`/archive/export-audit${q}`);
+    },
   };
 }
 

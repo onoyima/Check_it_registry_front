@@ -27,6 +27,7 @@ import { Device, Report } from '../types/database'
 import { useToast, ToastContainer } from '../components/Toast'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../contexts/AuthContext'
+import { getDisplayName, getUserInitials } from '../utils/userHelpers'
 
 interface RecentActivity {
   id: string
@@ -257,10 +258,10 @@ export default function Dashboard() {
                     fontWeight: 700
                   }}
                 >
-                  {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                  {getUserInitials(user) || user?.email?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
                 <span>
-                  {greeting}, {user?.name || user?.email || 'User'}!
+                  {greeting}, {getDisplayName(user) || user?.email || 'User'}!
                 </span>
               </h1>
               <p>
@@ -388,7 +389,7 @@ export default function Dashboard() {
                     </Link>
                   </div>
                   <div className="col-6 col-lg-3">
-                    <Link to="/report-missing"
+                    <Link to="/report-incident"
                       className="d-flex flex-column align-items-center justify-content-center p-4 rounded-3 text-decoration-none"
                       style={{ background: 'rgba(239, 68, 68, 0.04)', border: '1px solid rgba(239, 68, 68, 0.12)', transition: 'all 0.2s' }}
                       onMouseOver={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'; e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)' }}

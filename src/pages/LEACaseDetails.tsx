@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Layout } from '../components/Layout'
 import { useParams, Link } from 'react-router-dom'
 import { Search, Smartphone, User, Calendar, AlertTriangle } from 'lucide-react'
+import { getDisplayName } from '../utils/userHelpers'
 
 type CaseDetails = {
   report: any
@@ -88,7 +89,7 @@ export default function LEACaseDetails() {
   return (
     <Layout requireAuth allowedRoles={["lea", "admin"]}>
       <div className="container py-3">
-        <div className="d-flex align-items-center justify-content-between mb-3">
+        <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3 mb-3">
           <div className="d-flex align-items-center gap-2">
             <Search />
             <div>
@@ -190,7 +191,7 @@ export default function LEACaseDetails() {
                 </div>
                 {data.reporter ? (
                   <div>
-                    <div className="fw-medium">{data.reporter.name}</div>
+                    <div className="fw-medium">{getDisplayName(data.reporter)}</div>
                     <div className="text-secondary" style={{ fontSize: 13 }}>{data.reporter.email}</div>
                   </div>
                 ) : (

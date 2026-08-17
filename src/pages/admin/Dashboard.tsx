@@ -22,6 +22,7 @@ import {
 import { Layout } from '../../components/Layout'
 import { useToast, ToastContainer } from '../../components/Toast'
 import { Link } from 'react-router-dom'
+import { getDisplayName } from '../../utils/userHelpers'
 
 interface DashboardStats {
   users: { total: number; new_24h: number; verified: number; growth_rate: number }
@@ -128,7 +129,7 @@ export default function AdminDashboard() {
       if (usersRes.ok && Array.isArray(usersData?.users)) {
         setRecentRegistrations(usersData.users.map((u: any) => ({
           id: u.id,
-          name: u.name || u.email,
+          name: getDisplayName(u) || u.email,
           email: u.email,
           role: u.role,
           created_at: u.created_at

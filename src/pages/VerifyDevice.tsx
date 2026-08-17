@@ -49,6 +49,25 @@ export default function VerifyDevice() {
     if (!/^\d*$/.test(val)) return
     const nc = [...otp]; nc[idx] = val; setOtp(nc)
     if (val && idx < 5) inputs.current[idx + 1]?.focus()
+    if (nc.every(d => d !== '') && nc.join('').length === 6) {
+      setTimeout(() => {
+        const fullOtp = nc.join('')
+        if (fullOtp.length === 6) {
+          setLoading(true)
+          const authToken = localStorage.getItem('auth_token')
+          fetch(`${import.meta.env.VITE_API_URL || '/api'}/devices/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+            body: JSON.stringify({ token, otp: fullOtp, deviceId: deviceInfo?.id }),
+          }).then(res => {
+            if (!res.ok) throw new Error('Verification failed')
+            setResult('success')
+            showSuccess('Device verified successfully!')
+          }).catch((err: any) => { setResult('failed'); showError(err.message) })
+            .finally(() => setLoading(false))
+        }
+      }, 0)
+    }
   }
 
   const handleKeyDown = (idx: number, e: React.KeyboardEvent) => {
@@ -66,6 +85,20 @@ export default function VerifyDevice() {
       text.split('').forEach((ch, i) => { nc[i] = ch })
       setOtp(nc)
       inputs.current[5]?.focus()
+      setTimeout(() => {
+        setLoading(true)
+        const authToken = localStorage.getItem('auth_token')
+        fetch(`${import.meta.env.VITE_API_URL || '/api'}/devices/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({ token, otp: text, deviceId: deviceInfo?.id }),
+        }).then(res => {
+          if (!res.ok) throw new Error('Verification failed')
+          setResult('success')
+          showSuccess('Device verified successfully!')
+        }).catch((err: any) => { setResult('failed'); showError(err.message) })
+          .finally(() => setLoading(false))
+      }, 0)
     }
   }
 

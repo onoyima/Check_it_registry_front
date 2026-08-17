@@ -26,11 +26,15 @@ import { useAuth } from '../contexts/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import KYCVerificationModal from '../components/KYCVerificationModal'
 import { apiClient } from '../lib/apiClient'
+import { getDisplayName, getUserInitials } from '../utils/userHelpers'
 
 // Interface matching the backend response
 interface UserProfile {
   id: string
   name: string
+  first_name?: string
+  middle_name?: string
+  last_name?: string
   email: string
   phone?: string
   region?: string
@@ -86,7 +90,7 @@ export default function Profile() {
         if (authUser) {
           setProfile(authUser as any)
           setFormData({
-            name: authUser.name,
+            name: getDisplayName(authUser as any),
             phone: (authUser as any).phone || '',
             region: (authUser as any).region || ''
           })
@@ -105,7 +109,7 @@ export default function Profile() {
         const data = await response.json()
         setProfile(data.user)
         setFormData({
-          name: data.user.name,
+          name: getDisplayName(data.user),
           phone: data.user.phone || '',
           region: data.user.region || ''
         })
@@ -194,7 +198,7 @@ export default function Profile() {
   const handleCancel = () => {
     if (profile) {
       setFormData({
-        name: profile.name,
+        name: getDisplayName(profile),
         phone: profile.phone || '',
         region: profile.region || ''
       })
@@ -363,7 +367,7 @@ export default function Profile() {
                     {profile.profile_image_url ? (
                       <img
                         src={profile.profile_image_url}
-                        alt={profile.name}
+                        alt={getDisplayName(profile)}
                         className="rounded-circle border border-4 border-white shadow-sm"
                         style={{ width: '100px', height: '100px', objectFit: 'cover' }}
                       />
@@ -377,7 +381,7 @@ export default function Profile() {
                           fontSize: '32px'
                         }}
                       >
-                        {profile.name.charAt(0).toUpperCase()}
+                        {getUserInitials(profile)}
                       </div>
                     )}
                     {/* Verified Checkmark */}
@@ -417,7 +421,7 @@ export default function Profile() {
 
               <div className="card-body text-center pt-5 pb-4 px-4">
                 <h3 className="h4 fw-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-                  {profile.name}
+                  {getDisplayName(profile)}
                 </h3>
                 <p className="text-muted mb-3">{profile.email}</p>
                 
@@ -652,7 +656,7 @@ export default function Profile() {
                           ) : (
                             <div className="d-flex align-items-center p-3 bg-light rounded-3">
                               <User size={20} className="text-muted me-3" />
-                              <span className="fw-medium text-dark">{profile.name}</span>
+                              <span className="fw-medium text-dark">{getDisplayName(profile)}</span>
                             </div>
                           )}
                         </div>

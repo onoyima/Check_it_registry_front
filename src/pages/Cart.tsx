@@ -42,7 +42,7 @@ export default function Cart() {
           </Link>
         </motion.div>
 
-        <div className="d-flex align-items-center justify-content-between mb-4">
+        <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3 mb-4">
           <div>
             <h4 style={{ fontWeight: 700, marginBottom: 4 }}>Shopping Cart</h4>
             <span style={{ color: 'var(--text-tertiary)', fontSize: 14 }}>{itemCount} item{itemCount !== 1 ? 's' : ''}</span>

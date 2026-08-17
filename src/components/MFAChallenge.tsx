@@ -70,6 +70,28 @@ export function MFAChallenge({ isOpen, onClose, actionType, actionLabel, onSucce
       const refs = isSecond ? secondInputRefs : inputRefs
       refs.current[index + 1]?.focus()
     }
+    if (copy.every(d => d !== '') && copy.join('').length === 6) {
+      setTimeout(() => {
+        const code = copy.join('')
+        if (isSecond) {
+          setLoading(true)
+          setError(null)
+          apiClient.security.mfaVerify({
+            session_id: sessionId,
+            otp: otp.join(''),
+            second_otp: code,
+          }).then(res => {
+            onSuccess(res.mfa_token || res.token || 'verified')
+          }).catch((e: any) => {
+            setError(e.message || 'Verification failed')
+          }).finally(() => setLoading(false))
+        } else if (requiresDualOtp) {
+          verify(code, 'verify_second')
+        } else {
+          verify(code)
+        }
+      }, 0)
+    }
   }
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent, isSecond: boolean) => {
@@ -172,7 +194,7 @@ export function MFAChallenge({ isOpen, onClose, actionType, actionLabel, onSucce
         >
           <motion.div
             className="modal-content"
-            style={{ maxWidth: 440 }}
+            style={{ maxWidth: 440, width: '90%' }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}

@@ -221,7 +221,7 @@ export default function BusinessMyListings() {
               <Search size={16} className="position-absolute" style={{ left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
               <input
                 className="modern-input"
-                style={{ paddingLeft: 40, width: 260 }}
+                style={{ paddingLeft: 40, width: '100%', maxWidth: 260 }}
                 placeholder="Search listings..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
@@ -229,7 +229,7 @@ export default function BusinessMyListings() {
             </div>
             <select
               className="modern-select"
-              style={{ width: 160 }}
+              style={{ width: '100%', maxWidth: 160 }}
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as any)}
             >

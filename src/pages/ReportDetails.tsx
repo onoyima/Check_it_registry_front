@@ -5,6 +5,7 @@ import { Layout } from '../components/Layout'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast, ToastContainer } from '../components/Toast'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { getDisplayName, getUserInitials } from '../utils/userHelpers'
 
 type Report = {
   id: string
@@ -15,7 +16,7 @@ type Report = {
   created_at: string
   updated_at: string
   device?: { id: string; brand: string; model: string; imei: string; serial: string }
-  reporter?: { id: string; name: string; email: string }
+  reporter?: { id: string; name: string; email: string; first_name?: string; middle_name?: string; last_name?: string }
 }
 
 export default function ReportDetails() {
@@ -176,9 +177,9 @@ export default function ReportDetails() {
                 <div className="modern-card p-4">
                   <h5 className="mb-3 d-flex align-items-center gap-2"><User size={18} style={{ color: 'var(--primary-600)' }} /> Reporter</h5>
                   <div className="d-flex align-items-center gap-3">
-                    <div className="avatar" style={{ background: 'linear-gradient(135deg, var(--primary-400), var(--primary-600))' }}>{report.reporter.name?.charAt(0) || '?'}</div>
+                    <div className="avatar" style={{ background: 'linear-gradient(135deg, var(--primary-400), var(--primary-600))' }}>{getUserInitials(report.reporter) || '?'}</div>
                     <div>
-                      <p className="fw-medium mb-0">{report.reporter.name || 'Anonymous'}</p>
+                      <p className="fw-medium mb-0">{getDisplayName(report.reporter) || 'Anonymous'}</p>
                       <p style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{report.reporter.email}</p>
                     </div>
                   </div>

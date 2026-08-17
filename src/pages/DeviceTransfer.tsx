@@ -106,6 +106,20 @@ export default function DeviceTransfer() {
     if (!/^\d*$/.test(val)) return
     const nc = [...otpInput]; nc[idx] = val; setOtpInput(nc)
     if (val && idx < 5) otpRefs.current[idx + 1]?.focus()
+    if (nc.every(d => d !== '') && nc.join('').length === 6) {
+      setTimeout(() => {
+        const otp = nc.join('')
+        if (verifyingTransfer) {
+          apiClient.deviceTransfer.verifyOtp({ transferId: verifyingTransfer, otpCode: otp })
+            .then(() => { showSuccess('Transfer verified and activated!'); setVerifyingTransfer(null); setOtpInput(['', '', '', '', '', '']); fetchTransfers() })
+            .catch((err: any) => showError(err.message || 'Invalid OTP'))
+        } else if (generatedTransferId) {
+          apiClient.deviceTransfer.verifyOtp({ transferId: generatedTransferId, otpCode: otp })
+            .then(() => { showSuccess('Transfer verified and activated!'); setShowOtpDialog(false); setOtpInput(['', '', '', '', '', '']); fetchTransfers() })
+            .catch((err: any) => showError(err.message || 'Invalid OTP'))
+        }
+      }, 0)
+    }
   }
 
   const handleOtpKeyDown = (idx: number, e: React.KeyboardEvent) => {
@@ -123,6 +137,17 @@ export default function DeviceTransfer() {
       text.split('').forEach((ch, i) => { nc[i] = ch })
       setOtpInput(nc)
       otpRefs.current[5]?.focus()
+      setTimeout(() => {
+        if (verifyingTransfer) {
+          apiClient.deviceTransfer.verifyOtp({ transferId: verifyingTransfer, otpCode: text })
+            .then(() => { showSuccess('Transfer verified and activated!'); setVerifyingTransfer(null); setOtpInput(['', '', '', '', '', '']); fetchTransfers() })
+            .catch((err: any) => showError(err.message || 'Invalid OTP'))
+        } else if (generatedTransferId) {
+          apiClient.deviceTransfer.verifyOtp({ transferId: generatedTransferId, otpCode: text })
+            .then(() => { showSuccess('Transfer verified and activated!'); setShowOtpDialog(false); setOtpInput(['', '', '', '', '', '']); fetchTransfers() })
+            .catch((err: any) => showError(err.message || 'Invalid OTP'))
+        }
+      }, 0)
     }
   }
 

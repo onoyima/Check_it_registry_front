@@ -72,7 +72,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const VerifyDevice = lazy(() => import('./pages/VerifyDevice'))
 const UserManagement = lazy(() => import('./pages/UserManagement'))
 const Analytics = lazy(() => import('./pages/Analytics'))
-const ReportMissing = lazy(() => import('./pages/ReportMissing'))
+
 const BusinessRegister = lazy(() => import('./pages/BusinessRegister'))
 const BulkDeviceRegistration = lazy(() => import('./pages/BulkDeviceRegistration'))
 const AuditTrail = lazy(() => import('./pages/AuditTrail'))
@@ -96,6 +96,11 @@ const BusinessOnboardings = lazy(() => import('./pages/BusinessOnboardings'))
 const DeviceRecovery = lazy(() => import('./pages/DeviceRecovery'))
 const RevenueSettings = lazy(() => import('./pages/admin/RevenueSettings'))
 const FraudAlerts = lazy(() => import('./pages/admin/FraudAlerts'))
+const AdminVerificationQueue = lazy(() => import('./pages/AdminVerificationQueue'))
+const AdminArchive = lazy(() => import('./pages/AdminArchive'))
+const AdminUserDetail = lazy(() => import('./pages/AdminUserDetail'))
+const AdminBusinessDetail = lazy(() => import('./pages/AdminBusinessDetail'))
+const AdminLEADetail = lazy(() => import('./pages/AdminLEADetail'))
 
 function AppRoutes() {
   const { user, loading } = useAuth()
@@ -152,6 +157,11 @@ function AppRoutes() {
         <Route path="/admin/report-management/:caseId" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminCaseDetails /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/system-settings" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminSystemSettings /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/transfers" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminTransferHistory /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/verification-queue" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminVerificationQueue /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/archive" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminArchive /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/user/:userId" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminUserDetail /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/business/:userId" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminBusinessDetail /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/lea/:userId" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminLEADetail /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/lea" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEAPortal /></ProtectedRoute>} />
         <Route path="/lea/alerts" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEAAlerts /></ProtectedRoute>} />
         <Route path="/lea/cases" element={<ProtectedRoute allowedRoles={['lea','admin']}><LEACases /></ProtectedRoute>} />
@@ -170,7 +180,7 @@ function AppRoutes() {
         <Route path="/reset-password" element={<PasswordReset />} />
         <Route path="/user-management" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
         <Route path="/analytics" element={<ProtectedRoute allowedRoles={['admin']}><Analytics /></ProtectedRoute>} />
-        <Route path="/report-missing" element={user ? <ReportMissing /> : <Navigate to="/login" />} />
+        <Route path="/report-missing" element={<Navigate to="/report-incident" replace />} />
         <Route path="/business-register" element={<BusinessRegister />} />
         <Route path="/bulk-register" element={user ? <BulkDeviceRegistration /> : <Navigate to="/login" />} />
         <Route path="/audit-trail" element={<ProtectedRoute allowedRoles={['admin']}><AuditTrail /></ProtectedRoute>} />

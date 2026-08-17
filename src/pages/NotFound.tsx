@@ -29,7 +29,7 @@ export default function NotFound() {
                   border: '4px solid var(--danger-200)',
                 }}
               >
-                <span className="fw-bold" style={{ fontSize: 56, color: 'var(--danger-500)' }}>404</span>
+                <span className="fw-bold" style={{ fontSize: 'clamp(40px, 10vw, 56px)', color: 'var(--danger-500)' }}>404</span>
               </motion.div>
 
               <h2 className="mb-2">Page Not Found</h2>

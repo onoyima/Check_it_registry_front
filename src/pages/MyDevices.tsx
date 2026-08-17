@@ -126,7 +126,7 @@ export default function MyDevices() {
                 <Link to="/register-device" className="btn-gradient-primary d-flex align-items-center gap-2">
                   <Plus size={18} /> Register New
                 </Link>
-                <Link to="/report-missing" className="btn-gradient-danger d-flex align-items-center gap-2">
+                <Link to="/report-incident" className="btn-gradient-danger d-flex align-items-center gap-2">
                   <Smartphone size={18} /> Report Issue
                 </Link>
               </div>
