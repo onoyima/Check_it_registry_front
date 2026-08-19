@@ -91,7 +91,7 @@ export default function Settings() {
   const handleSave = async () => {
     try {
       setSaving(true)
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await apiClient.profile.updatePreferences(preferences)
       showSuccess('Settings Saved', 'Your preferences have been updated successfully')
     } catch (err) {
       showError('Save Failed', 'Failed to update preferences')

@@ -50,7 +50,7 @@ interface UserProfile {
   caution_flag: boolean
 }
 
-// Mock stats for now
+// Profile stats from API
 interface ProfileStats {
   total_devices: number
   verified_devices: number
@@ -114,12 +114,23 @@ export default function Profile() {
           region: data.user.region || ''
         })
 
-        setStats({
-          total_devices: Math.floor(Math.random() * 5),
-          verified_devices: Math.floor(Math.random() * 3),
-          total_reports: 0,
-          active_transfers: 0
-        })
+        try {
+          const statsRes = await fetch(`${API_URL}/profile/stats`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          if (statsRes.ok) {
+            const statsData = await statsRes.json()
+            const s = statsData.stats || statsData
+            setStats({
+              total_devices: s.devices || s.total_devices || 0,
+              verified_devices: s.verified_devices || 0,
+              total_reports: s.reports || s.total_reports || 0,
+              active_transfers: s.transfers || s.active_transfers || 0
+            })
+          }
+        } catch {
+          setStats({ total_devices: 0, verified_devices: 0, total_reports: 0, active_transfers: 0 })
+        }
       } else {
         throw new Error('Failed to load profile')
       }

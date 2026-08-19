@@ -88,7 +88,7 @@ export default function MarketplaceBrowse() {
           condition: condition === 'all' ? undefined : condition,
           max_price: priceRange > 0 ? PRICE_RANGES[priceRange].max : undefined,
           min_price: priceRange > 0 ? PRICE_RANGES[priceRange].min : undefined,
-          status: status === 'all' ? undefined : status,
+          seller_verified: status === 'all' ? undefined : status,
         })
 
         const mapped: Listing[] = data.map((l: any) => ({
