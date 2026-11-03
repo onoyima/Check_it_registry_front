@@ -44,5 +44,6 @@ jobs:
 
       - name: Deploy website
         run: |
-          scp -i ~/.ssh/deploy_key -r dist/. \
-            prove-deploy@${{ secrets.VPS_HOST }}:/home/proveownership.com/public_html/
+          rsync -r --exclude='.env' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            dist/ prove-deploy@${{ secrets.VPS_HOST }}:/home/proveownership.com/public_html/
