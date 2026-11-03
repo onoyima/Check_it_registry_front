@@ -10,7 +10,7 @@ const sections = [
   {
     icon: FileText,
     title: '1. Who is responsible for your data',
-    content: `AI-Con Digitals Nigeria Limited, B96, Along Law School Road, Opp. JAMB Office, Bwari, Abuja, operates Prove Ownership and is the data controller for the personal data described here. We process personal data in line with the Nigeria Data Protection Act 2023 (NDPA) and the rules of the Nigeria Data Protection Commission (NDPC).
+    content: `AI-CON Nigeria Limited, GLASS PLAZA OPP JAMB OFFICE, HOUSE NO 2, BWARI, operates ProveOwnership and is the data controller for the personal data described here. We process personal data in line with the Nigeria Data Protection Act 2023 (NDPA) and the rules of the Nigeria Data Protection Commission (NDPC).
 
 Questions or requests: support@proveownership.com (subject "Data protection").`
   },
@@ -106,8 +106,8 @@ Email support@proveownership.com and we will respond within 30 days. Some data, 
     title: '11. Changes and contact',
     content: `We will post any changes here with a new date and tell you about important ones.
 
-AI-Con Digitals Nigeria Limited (Prove Ownership)
-B96, Along Law School Road, Opp. JAMB Office, Bwari, Abuja, Nigeria
+AI-CON Nigeria Limited (ProveOwnership)
+GLASS PLAZA OPP JAMB OFFICE, HOUSE NO 2, BWARI
 Email: support@proveownership.com · Phone: 08034875647, 08120212639`
   },
 ]

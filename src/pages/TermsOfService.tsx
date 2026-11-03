@@ -11,7 +11,7 @@ const sections = [
   {
     icon: FileText,
     title: '1. Who we are and these Terms',
-    content: `Prove Ownership ("Prove Ownership", "we", "us") is a device and property registry operated by AI-Con Digitals Nigeria Limited, B96, Along Law School Road, Opp. JAMB Office, Bwari, Abuja, Nigeria.
+    content: `ProveOwnership ("ProveOwnership", "we", "us") is a device registration and ownership verification platform owned and operated by AI-CON Nigeria Limited, GLASS PLAZA OPP JAMB OFFICE, HOUSE NO 2, BWARI, Nigeria.
 
 These Terms are a binding agreement between you and us. They apply whenever you use the Prove Ownership website, app or API ("the Platform"). By creating an account or using the Platform you accept them. If you do not accept them, do not use the Platform.
 
@@ -172,8 +172,8 @@ We may report illegal activity to the police and cooperate with lawful requests 
   {
     icon: Mail,
     title: '15. Contact us',
-    content: `AI-Con Digitals Nigeria Limited (Prove Ownership)
-B96, Along Law School Road, Opp. JAMB Office, Bwari, Abuja, Nigeria
+    content: `AI-CON Nigeria Limited (ProveOwnership)
+GLASS PLAZA OPP JAMB OFFICE, HOUSE NO 2, BWARI
 Email: support@proveownership.com
 Phone: 08034875647, 08120212639`
   },

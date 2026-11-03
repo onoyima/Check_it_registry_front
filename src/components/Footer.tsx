@@ -10,7 +10,7 @@ export default function Footer({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
       <footer className="po-footer-compact">
-        <span>&copy; {currentYear} Prove Ownership</span>
+        <span>&copy; {currentYear} {companyInfo.product}</span>
         <nav aria-label="Legal">
           <Link to="/help">Help</Link>
           <Link to="/terms">Terms</Link>
@@ -38,7 +38,7 @@ export default function Footer({ compact = false }: { compact?: boolean }) {
           {/* Brand */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Shield size={18} style={{ color: 'var(--primary-600)' }} />
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Prove Ownership</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{companyInfo.product}</span>
             <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
               &copy; {currentYear} {companyInfo.name} &mdash; {companyInfo.product}. All rights reserved.
             </span>

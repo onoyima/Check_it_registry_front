@@ -23,6 +23,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { useCart } from '../contexts/CartContext';
 import { getDisplayName, getUserInitials } from '../utils/userHelpers';
+import { companyInfo } from '../lib/companyInfo';
 
 interface UserData {
   id: string;
@@ -128,8 +129,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onMenuClick, sidebarOpe
             </button>
           )}
           <Link to="/" className="po-nav-brand d-flex align-items-center gap-2 text-decoration-none" onClick={() => setIsMobileMenuOpen(false)}>
-            <img src="/logo-mark.png" alt="Prove Ownership" style={{ height: '28px', objectFit: 'contain' }} />
-            <span className="fw-bold d-none d-sm-inline" style={{ color: 'var(--text-primary)', fontSize: 'var(--text-lg)' }}>Prove Ownership</span>
+            <img src="/logo-mark.png" alt={companyInfo.product} style={{ height: '28px', objectFit: 'contain' }} />
+            <span className="fw-bold d-none d-sm-inline" style={{ color: 'var(--text-primary)', fontSize: 'var(--text-lg)' }}>{companyInfo.product}</span>
           </Link>
         </div>
 

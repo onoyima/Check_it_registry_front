@@ -623,6 +623,87 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===================== ABOUT US SECTION ===================== */}
+      <section id="about" className="py-5 position-relative overflow-hidden" style={{ scrollMarginTop: '80px' }}>
+        <div className="container py-5 position-relative" style={{ zIndex: 1 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-5"
+          >
+            <span className="d-inline-block px-3 py-1 rounded-pill fw-semibold mb-3" style={{
+              fontSize: 'var(--text-sm)',
+              background: 'rgba(22,163,74,0.08)',
+              color: 'var(--primary-600)',
+              border: '1px solid rgba(22,163,74,0.15)'
+            }}>About Us</span>
+            <h2 className="fw-bold mb-3" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', color: 'var(--text-primary)' }}>
+              Who We Are
+            </h2>
+          </motion.div>
+
+          <div className="row g-4 align-items-center">
+            <div className="col-lg-6">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+              >
+                <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-lg)', lineHeight: 'var(--leading-relaxed)' }}>
+                  {companyInfo.description}
+                </p>
+                <div className="d-flex flex-wrap gap-3 mt-4">
+                  <span className="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill fw-semibold" style={{ fontSize: 'var(--text-sm)', color: 'var(--primary-600)', background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.15)' }}>
+                    <ShieldCheck size={16} /> Owned &amp; operated by {companyInfo.name}
+                  </span>
+                  <span className="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill fw-semibold" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                    <MapPin size={16} /> {companyInfo.address}
+                  </span>
+                </div>
+              </motion.div>
+            </div>
+
+            <div className="col-lg-6">
+              <div className="row g-3">
+                {[
+                  { icon: Database, title: 'Device Registration', desc: 'Register your devices and keep a permanent, verified record of ownership.' },
+                  { icon: Fingerprint, title: 'Identity Verification', desc: 'Identity checks help prevent fraudulent registrations and protect genuine owners.' },
+                  { icon: AlertTriangle, title: 'Loss & Theft Reports', desc: 'Report lost, stolen, or damaged assets so they can be flagged and protected.' },
+                  { icon: ShieldCheck, title: 'Secure Payments', desc: 'An integrated online payment system securely processes payments for applicable services.' }
+                ].map((item, idx) => {
+                  const Icon = item.icon
+                  return (
+                    <motion.div
+                      key={item.title}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: idx * 0.08 }}
+                      className="col-sm-6"
+                    >
+                      <div className="card h-100 border-0 p-4 rounded-4" style={{
+                        background: 'var(--bg-primary)',
+                        border: '1px solid var(--border-color)'
+                      }}>
+                        <div className="d-flex align-items-center justify-content-center mb-3" style={{
+                          width: 44, height: 44, borderRadius: 12,
+                          background: 'linear-gradient(135deg, rgba(22,163,74,0.12), rgba(99,102,241,0.12))'
+                        }}>
+                          <Icon size={22} style={{ color: 'var(--primary-600)' }} />
+                        </div>
+                        <h6 className="fw-bold mb-2" style={{ color: 'var(--text-primary)' }}>{item.title}</h6>
+                        <p className="mb-0" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', lineHeight: 'var(--leading-relaxed)' }}>{item.desc}</p>
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ===================== TEAM SECTION ===================== */}
       <section className="py-5 position-relative overflow-hidden" style={{ background: 'transparent' }}>
         <div className="position-absolute top-0 start-0 w-100 h-100 opacity-[0.03]" style={{
@@ -936,8 +1017,8 @@ export default function LandingPage() {
           <div className="row g-4 pb-4">
             <div className="col-lg-4">
               <div className="d-flex align-items-center gap-2 mb-3">
-                <img src="/logo1.png" alt="Prove Ownership Logo" style={{ height: 32, objectFit: 'contain' }} />
-                <span className="fw-bold" style={{ color: 'var(--text-primary)', fontSize: 'var(--text-lg)' }}>Prove Ownership</span>
+                <img src="/logo1.png" alt={`${companyInfo.product} Logo`} style={{ height: 32, objectFit: 'contain' }} />
+                <span className="fw-bold" style={{ color: 'var(--text-primary)', fontSize: 'var(--text-lg)' }}>{companyInfo.product}</span>
               </div>
               <p style={{ color: 'var(--text-tertiary)', lineHeight: 'var(--leading-relaxed)' }}>
                 Empowering ownership, preventing theft, and enabling recovery through technology.
