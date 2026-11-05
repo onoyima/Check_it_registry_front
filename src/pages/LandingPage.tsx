@@ -28,6 +28,7 @@ import {
   Building2,
   UserSquare2
 } from 'lucide-react';
+import { FaFacebookF, FaXTwitter, FaLinkedinIn, FaInstagram, FaWhatsapp } from 'react-icons/fa6';
 import { apiClient } from '../lib/apiClient';
 import { companyInfo } from '../lib/companyInfo';
 import { landingVariantsEnabled, landingVersions } from '../lib/landingVariants';
@@ -891,17 +892,21 @@ export default function LandingPage() {
                   </span>
                 </div>
               </div>
-              <div className="d-flex gap-3 mt-3">
-                {['facebook', 'twitter', 'linkedin', 'instagram'].map((social) => (
-                  <a key={social} href={`#${social}`} className="d-inline-flex align-items-center justify-content-center rounded-circle text-decoration-none" style={{
+              <div className="d-flex flex-row flex-lg-column gap-3 mt-3">
+                {[
+                  { name: 'facebook', icon: FaFacebookF, href: '#facebook' },
+                  { name: 'twitter', icon: FaXTwitter, href: '#twitter' },
+                  { name: 'linkedin', icon: FaLinkedinIn, href: '#linkedin' },
+                  { name: 'instagram', icon: FaInstagram, href: '#instagram' }
+                ].map((social) => (
+                  <a key={social.name} href={social.href} className="d-inline-flex align-items-center justify-content-center rounded-circle text-decoration-none" style={{
                     width: 36, height: 36,
                     background: 'var(--bg-tertiary)',
                     color: 'var(--text-tertiary)',
                     fontSize: 'var(--text-sm)',
-                    fontWeight: 600,
-                    textTransform: 'capitalize'
-                  }}>
-                    {social[0].toUpperCase()}
+                    fontWeight: 600
+                  }} aria-label={social.name}>
+                    <social.icon size={18} />
                   </a>
                 ))}
               </div>
@@ -931,6 +936,37 @@ export default function LandingPage() {
               <small className="d-block mt-2" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)' }}>
                 Latest security alerts and feature updates.
               </small>
+              <div className="mt-4">
+                <a
+                  href={`https://wa.me/234${companyInfo.phones[0].replace(/\D/g, '').replace(/^0/, '')}?text=Hello%20ProveOwnership%2C%20I%20need%20assistance.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="d-flex align-items-center gap-3 p-3 rounded-3 text-decoration-none"
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-primary)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--primary-50)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                  aria-label="Chat with us on WhatsApp"
+                >
+                  <span className="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                        style={{ width: 44, height: 44, background: 'var(--primary-600)', color: '#fff' }}>
+                    <FaWhatsapp size={22} />
+                  </span>
+                  <div>
+                    <small style={{ color: 'var(--text-tertiary)', display: 'block', fontWeight: 600, textTransform: 'uppercase', fontSize: 'var(--text-xs)', letterSpacing: '0.05em' }}>
+                      Need help?
+                    </small>
+                    <strong style={{ fontSize: 'var(--text-sm)' }}>Chat on WhatsApp</strong>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                      {companyInfo.phones[0]}
+                    </div>
+                  </div>
+                </a>
+              </div>
             </div>
           </div>
           <div className="pt-4 mt-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3" style={{ borderTop: '1px solid var(--border-color)' }}>
