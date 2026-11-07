@@ -66,3 +66,25 @@ test('admins find "Modules & payments" in the menu and on the dashboard', async 
   for (const g of [/to review/i, /recovery/i, /people & items/i, /reports & logs/i, /site settings/i]) await expect(menu.getByRole('button', { name: g })).toBeVisible()
   await page.screenshot({ path: 'e2e/.screens/admin_sidebar.png' })
 })
+
+test('admins set every price on the Prices page', async ({ page }) => {
+  await signIn(page, 'admin')
+  await page.goto('/admin/prices')
+  const list = page.getByTestId('prices')
+  for (const t of [/report a stolen or lost item/i, /check someone else's item/i, /free checks of other people's items/i, /release fee/i, /business verification/i, /marketplace commission/i]) await expect(list).toContainText(t)
+  const row = page.getByTestId('price-report_verification_fee')
+  const input = row.locator('input')
+  const before = await input.inputValue()
+  await input.fill('450')
+  await row.getByRole('button', { name: /save/i }).click()
+  await expect(row).toContainText('₦450')
+  // a percentage over 100 is refused
+  const pct = page.getByTestId('price-marketplace_commission_percent')
+  await pct.locator('input').fill('150')
+  await pct.getByRole('button', { name: /save/i }).click()
+  await expect(pct.getByRole('alert')).toContainText(/at most 100/i)
+  // put the report fee back
+  await input.fill(before)
+  await row.getByRole('button', { name: /save/i }).click()
+  await expect(row).toContainText(`₦${Number(before).toLocaleString()}`)
+})

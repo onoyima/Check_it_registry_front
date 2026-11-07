@@ -78,12 +78,17 @@ test('signed-in people do see the check button on the landing page', async ({ pa
   await expect(page).toHaveURL(/\/device-check/)
 })
 
-test('"Verify Identity" on the profile opens the identity page (no hidden pop-up)', async ({ page }) => {
-  await signIn(page, 'business')
+test('there is no separate identity step: the profile explains the NIN is asked when reporting', async ({ page }) => {
+  await signIn(page, 'user')
   await page.goto('/profile')
-  await page.getByRole('button', { name: /verify identity|start verification/i }).first().click()
-  await expect(page).toHaveURL(/\/identity-verification/)
-  await expect(page.getByRole('heading', { name: /your identity/i }).first()).toBeVisible()
+  await expect(page.getByTestId('identity-note')).toContainText(/report an item/i)
+  await expect(page.getByRole('button', { name: /verify identity|start verification/i })).toHaveCount(0)
+  await page.goto('/identity-verification')
+  await expect(page).toHaveURL(/\/profile/)
+})
+
+test('a business verifies on its own page, with an optional NIN for non-directors', async ({ page }) => {
+  await signIn(page, 'business')
   await page.goto('/profile')
   await page.getByRole('link', { name: /verify your business/i }).click()
   await expect(page).toHaveURL(/\/business-verification/)

@@ -25,7 +25,8 @@ export default defineConfig({
     baseURL: WEB_URL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    launchOptions: { executablePath, args: executablePath ? ['--no-sandbox'] : [] },
+    // A pretend camera for the photo taken at every item check
+    launchOptions: { executablePath, args: [...(executablePath ? ['--no-sandbox'] : []), '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] },
   },
   projects: [
     { name: 'flows', testMatch: /flows\/.*\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1366, height: 860 } } },

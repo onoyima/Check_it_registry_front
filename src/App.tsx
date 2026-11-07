@@ -96,14 +96,13 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 const AdminMarketplaceManagement = lazy(() => import('./pages/AdminMarketplaceManagement'))
 const LandingContentManager = lazy(() => import('./pages/admin/LandingContentManager'))
 const DeviceCheck = lazy(() => import('./pages/DeviceCheck'))
-const IdentityVerification = lazy(() => import('./pages/IdentityVerification'))
+const CheckCertificate = lazy(() => import('./pages/CheckCertificate'))
+const AdminPrices = lazy(() => import('./pages/AdminPrices'))
 const BusinessVerification = lazy(() => import('./pages/BusinessVerification'))
 const BusinessOnboarding = lazy(() => import('./pages/BusinessOnboarding'))
 const BusinessOnboardings = lazy(() => import('./pages/BusinessOnboardings'))
-const DeviceRecovery = lazy(() => import('./pages/DeviceRecovery'))
 const RevenueSettings = lazy(() => import('./pages/admin/RevenueSettings'))
 const FraudAlerts = lazy(() => import('./pages/admin/FraudAlerts'))
-const RecoveryServiceDashboard = lazy(() => import('./components/admin/RecoveryServiceDashboard'))
 const AdminVerificationQueue = lazy(() => import('./pages/AdminVerificationQueue'))
 const AdminArchive = lazy(() => import('./pages/AdminArchive'))
 const AdminUserDetail = lazy(() => import('./pages/AdminUserDetail'))
@@ -154,6 +153,7 @@ function AppRoutes() {
         <Route path="/business/my-listings" element={<ModuleGate name="marketplace"><ProtectedRoute allowedRoles={['business','admin']}><BusinessMyListings /></ProtectedRoute></ModuleGate>} />
         <Route path="/marketplace/create-listing" element={<ModuleGate name="marketplace">{user ? <CreateListing /> : <Navigate to="/login" />}</ModuleGate>} />
         <Route path="/device-check" element={user ? <ErrorBoundary><DeviceCheck /></ErrorBoundary> : <Navigate to="/login" />} />
+        <Route path="/check-certificate" element={user ? <CheckCertificate /> : <Navigate to="/login" />} />
         <Route path="/verification-status" element={user ? <DeviceVerificationStatus /> : <Navigate to="/login" />} />
         <Route path="/device-check-report" element={user ? <DeviceCheckReport /> : <Navigate to="/login" />} />
         <Route path="/register-device" element={user ? <DeviceRegistration /> : <Navigate to="/login" />} />
@@ -219,20 +219,19 @@ function AppRoutes() {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/cookies" element={<CookiePolicy />} />
         <Route path="/help" element={<HelpPage />} />
-        <Route path="/identity-verification" element={user ? <IdentityVerification /> : <Navigate to="/login" />} />
+        <Route path="/identity-verification" element={<Navigate to="/profile" replace />} />
         <Route path="/business-verification" element={user ? <BusinessVerification /> : <Navigate to="/login" />} />
         <Route path="/business/onboard" element={<ProtectedRoute allowedRoles={['business','admin']}><BusinessOnboarding /></ProtectedRoute>} />
         <Route path="/business/onboardings" element={<ProtectedRoute allowedRoles={['business','admin']}><BusinessOnboardings /></ProtectedRoute>} />
-        <Route path="/device-recovery" element={user ? <DeviceRecovery /> : <Navigate to="/login" />} />
 
         <Route path="/admin/device-categories" element={<ProtectedRoute allowedRoles={['admin']}><AdminDeviceCategories /></ProtectedRoute>} />
         <Route path="/admin/landing-content" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><LandingContentManager /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/marketplace" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><AdminMarketplaceManagement /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/revenue" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><RevenueSettings /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/admin/fraud-alerts" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><FraudAlerts /></ErrorBoundary></ProtectedRoute>} />
-        <Route path="/admin/recovery" element={<ProtectedRoute allowedRoles={['admin']}><ErrorBoundary><RecoveryServiceDashboard /></ErrorBoundary></ProtectedRoute>} />
         <Route path="/cart" element={<ModuleGate name="marketplace"><Cart /></ModuleGate>} />
         <Route path="/admin/modules" element={<ProtectedRoute allowedRoles={['admin']}><AdminModules /></ProtectedRoute>} />
+        <Route path="/admin/prices" element={<ProtectedRoute allowedRoles={['admin']}><AdminPrices /></ProtectedRoute>} />
         <Route path="/admin/custody" element={<ProtectedRoute allowedRoles={['admin']}><CustodyDesk /></ProtectedRoute>} />
         <Route path="/lea/custody" element={<ProtectedRoute allowedRoles={['lea','admin']}><CustodyDesk /></ProtectedRoute>} />
         <Route path="/checkout" element={<ModuleGate name="marketplace">{user ? <Checkout /> : <Navigate to="/login" />}</ModuleGate>} />

@@ -1,7 +1,7 @@
 // Verify the business with its CAC registration number. The business
 // verification fee is paid once; an attempt that fails keeps the payment for
 // the next try. The account holder must be one of the company's directors,
-// or confirm their own NIN first.
+// or give their own NIN here as well.
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Building2, CheckCircle2, Loader2, CreditCard } from 'lucide-react'
@@ -15,6 +15,7 @@ export default function BusinessVerification() {
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<any>(null)
   const [rc, setRc] = useState('')
+  const [nin, setNin] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [showPay, setShowPay] = useState(false)
@@ -30,7 +31,7 @@ export default function BusinessVerification() {
   const verify = async (ref = paid) => {
     setBusy(true); setError('')
     try {
-      const r: any = await apiClient.security.verifyCAC({ rcNumber: rc, pay_by_pass: ref || undefined } as any)
+      const r: any = await apiClient.security.verifyCAC({ rcNumber: rc, nin: nin || undefined, pay_by_pass: ref || undefined } as any)
       if (r?.requiresPayment) { remember(''); setShowPay(true); return }
       remember('')
       await load()
@@ -66,15 +67,18 @@ export default function BusinessVerification() {
               <Building2 size={28} className="po-text-success" aria-hidden="true" />
               <div>
                 <h2 className="po-card-title mb-0">{status.businessName}</h2>
-                <p className="po-muted mb-0">We check your registration with the Corporate Affairs Commission (CAC). You must be one of the company's directors, or <Link to="/identity-verification">confirm your own NIN</Link> first.</p>
+                <p className="po-muted mb-0">We check your registration with the Corporate Affairs Commission (CAC). You must be one of the company's directors. If you aren't listed, add your own NIN below.</p>
               </div>
             </div>
             <label className="po-label" htmlFor="biz-rc">Registration number (RC or BN)</label>
             <input id="biz-rc" className="modern-input po-mono" autoComplete="off" placeholder="e.g. RC1234567" value={rc}
               onChange={(e) => { setRc(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15)); setError('') }} />
+            <label className="po-label" htmlFor="biz-nin">Your NIN <span className="po-muted">(only if you aren't listed as a director)</span></label>
+            <input id="biz-nin" className="modern-input po-mono" inputMode="numeric" autoComplete="off" placeholder="11 digits" value={nin}
+              onChange={(e) => { setNin(e.target.value.replace(/\D/g, '').slice(0, 11)); setError('') }} />
             {paid && <p className="po-help mb-0"><CreditCard size={14} aria-hidden="true" /> Fee paid. It's kept until your business is verified.</p>}
             {error && <p className="po-error mb-0" role="alert">{error}</p>}
-            <button type="submit" className="po-btn po-btn-primary" disabled={busy || rc.length < 5}>
+            <button type="submit" className="po-btn po-btn-primary" disabled={busy || rc.length < 5 || (nin.length > 0 && nin.length !== 11)}>
               {busy ? <Loader2 size={18} className="po-spin" aria-hidden="true" /> : null} {paid ? 'Verify business' : 'Pay and verify'}
             </button>
           </form>

@@ -85,14 +85,8 @@ export class DeviceFingerprintService {
   async getNetworkInfo(): Promise<NetworkInfo> {
     const networkInfo: NetworkInfo = {};
 
-    try {
-      // Get IP address from external service (fallback)
-      const ipResponse = await fetch('https://api.ipify.org?format=json');
-      const ipData = await ipResponse.json();
-      networkInfo.ipAddress = ipData.ip;
-    } catch (error) {
-      console.warn('Could not fetch IP address:', error);
-    }
+    // The IP address is recorded by our server from the request itself
+    // (no outside lookup service, which could be blocked or faked)
 
     // Get connection information if available
     const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;

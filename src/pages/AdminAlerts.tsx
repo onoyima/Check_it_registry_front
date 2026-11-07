@@ -1,3 +1,4 @@
+import { CheckerPhoto, checkerName } from '../components/CheckerDetails'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Layout } from '../components/Layout'
@@ -184,8 +185,13 @@ export default function AdminAlerts() {
                       <td style={{ color: 'var(--text-primary)' }}>{alert.brand} {alert.model}</td>
                       <td><small style={{ color: 'var(--text-tertiary)' }}>{alert.imei || alert.serial || '-'}</small></td>
                       <td>
-                        <div style={{ color: 'var(--text-primary)' }}>{alert.checker_name || 'Anonymous'}</div>
-                        <small style={{ color: 'var(--text-tertiary)' }}>{alert.checker_email || alert.checker_phone || ''}</small>
+                        <div className="d-flex gap-2 align-items-center">
+                          <CheckerPhoto url={(alert as any).selfie_url} size={40} />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ color: 'var(--text-primary)' }}>{checkerName(alert as any)}</div>
+                            <small style={{ color: 'var(--text-tertiary)' }}>{alert.checker_email || alert.checker_phone || ''}</small>
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <div className="d-flex align-items-center gap-1">
@@ -193,7 +199,7 @@ export default function AdminAlerts() {
                           <div>
                             <small style={{ color: 'var(--text-primary)' }}>IP: {alert.ip_address || '-'}</small>
                             <br />
-                            <small style={{ color: 'var(--text-tertiary)' }}>MAC: {alert.mac_address || '-'}</small>
+                            <small style={{ color: 'var(--text-tertiary)' }} title="Browser ID">Browser: {(alert as any).browser_device_id ? String((alert as any).browser_device_id).slice(0, 12) + '…' : '-'}</small>
                           </div>
                         </div>
                       </td>

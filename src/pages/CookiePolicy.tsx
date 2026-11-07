@@ -3,7 +3,7 @@ import { Cookie, Shield, Eye, Settings, BarChart3, AlertTriangle, ArrowLeft, Mai
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 
-const lastUpdated = 'October 23, 2026'
+const lastUpdated = 'November 7, 2026'
 
 // Lists exactly what the app stores in the browser (checked against the code).
 const sections = [
@@ -21,7 +21,7 @@ We do not use advertising, analytics or tracking cookies, and we do not let adve
 
 • auth_token (local storage): keeps you signed in. Removed when you sign out. A sign-in lasts 1 day, or 30 days with "Remember me" (7 days for administrator and police accounts).
 • user_data (local storage): your name and account type, so pages load quickly. Removed when you sign out.
-• po_device_id (local storage): a random id for this browser, used for "remember this device" and to protect your account. It contains nothing about you. Kept until you clear your browser storage.
+• po_device_id (local storage): a random id for this browser, used for "remember this device", to protect your account and recorded with each item check as the browser ID. It contains nothing about you. Kept until you clear your browser storage.
 • post_login_redirect (session storage): returns you to the page you were on after you sign in. Cleared when you close the tab.
 • po_report_payment and po_business_payment (session storage): keep a payment you have made available while you finish the report or verification it is for, so you are not charged twice. Cleared when the action is completed or the tab is closed.`
   },
@@ -36,7 +36,7 @@ We do not use advertising, analytics or tracking cookies, and we do not let adve
   {
     icon: AlertTriangle,
     title: 'Security and fraud prevention',
-    content: `When you sign in or check an item, the app sends technical details of your device and connection, for example browser, screen, time zone and IP address, and for checks your approximate location if you allow it. These are used to protect accounts, prevent fraud and record checks as explained in our Privacy Policy. They are sent to our server and are not stored as cookies.`
+    content: `When you sign in or check an item, the app sends technical details of your device and connection, for example browser, screen, time zone and language; our server records the IP address the request came from. For checks it also sends your live location and a photo taken with your camera, with your permission. These are used to protect accounts, prevent fraud and record checks as explained in our Privacy Policy. They are sent to our server and are not stored as cookies.`
   },
   {
     icon: Eye,

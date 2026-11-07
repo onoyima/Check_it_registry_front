@@ -30,6 +30,12 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Check frontend build env
+        run: |
+          [ -n "$VITE_PAYSTACK_PUBLIC_KEY" ] || echo "::warning::VITE_PAYSTACK_PUBLIC_KEY is empty; Paystack checkout will not work"
+          [ -n "$VITE_GOOGLE_MAPS_API_KEY" ] || echo "::warning::VITE_GOOGLE_MAPS_API_KEY is empty; maps features will be disabled"
+
       - run: npm run build
 
       - name: Configure SSH
@@ -44,5 +50,11 @@ jobs:
 
       - name: Deploy website
         run: |
-          scp -i ~/.ssh/deploy_key -r dist/. \
-            prove-deploy@${{ secrets.VPS_HOST }}:/home/proveownership.com/public_html/
+          rsync -r --exclude='.env' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            dist/ prove-deploy@${{ secrets.VPS_HOST }}:/home/proveownership.com/public_html/
+
+      - name: Verify SPA rewrite
+        run: |
+          ssh -i ~/.ssh/deploy_key "prove-deploy@${{ secrets.VPS_HOST }}" \
+            "test -f /home/proveownership.com/public_html/.htaccess && grep -q 'index.html' /home/proveownership.com/public_html/.htaccess && echo 'SPA rewrite (.htaccess) is in place'"

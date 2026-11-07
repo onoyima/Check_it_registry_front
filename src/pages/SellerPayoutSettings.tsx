@@ -8,7 +8,7 @@ import { useConfirm } from '../components/ConfirmDialog'
 import { useNavigate, Link } from 'react-router-dom'
 
 type Bank = { code: string; name: string }
-type BankAccount = { id: string; bankName: string; bankCode: string; accountNumber: string; accountName: string; isVerified: boolean }
+type BankAccount = { id: string; bankName: string; bankCode: string; accountNumber: string; accountName: string; isVerified: boolean; provider?: string | null; needsUpdate?: boolean }
 
 export default function SellerPayoutSettings() {
   const { user: _user } = useAuth()
@@ -27,6 +27,8 @@ export default function SellerPayoutSettings() {
   const [accountName, setAccountName] = useState('')
   const [resolving, setResolving] = useState(false)
   const [resolved, setResolved] = useState(false)
+  // Banks come from the payment company the admin switched on for payouts
+  const [banksError, setBanksError] = useState('')
 
   const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -42,10 +44,9 @@ export default function SellerPayoutSettings() {
           fetch(`${API_BASE}/payments/seller-bank-account`, { headers }),
         ])
 
-        if (banksRes.ok) {
-          const banksData = await banksRes.json()
-          setBanks(banksData.data || [])
-        }
+        const banksData = await banksRes.json().catch(() => ({}))
+        if (banksRes.ok) setBanks(banksData.data || [])
+        else setBanksError(banksData.error || 'The bank list is unavailable right now.')
         if (acctRes.ok) {
           const acctData = await acctRes.json()
           if (acctData.data) setAccount(acctData.data)
@@ -95,7 +96,7 @@ export default function SellerPayoutSettings() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to save')
       showSuccess('Bank account saved! You can now receive payouts.')
-      setAccount({ id: '', bankName: bank?.name || '', bankCode: selectedBank, accountNumber, accountName, isVerified: true })
+      setAccount({ id: '', bankName: bank?.name || '', bankCode: selectedBank, accountNumber, accountName: data.accountName || accountName, isVerified: true, needsUpdate: false })
       setStep('view')
     } catch (err: any) {
       showError(err.message)
@@ -138,6 +139,11 @@ export default function SellerPayoutSettings() {
           </div>
         </div>
 
+        {account?.needsUpdate && step === 'view' && (
+          <div className="po-alert po-alert-warning mb-3" role="status" data-testid="payout-needs-update">
+            <AlertTriangle size={18} aria-hidden="true" /> Prove Ownership now pays sellers through a different payment company. Choose your bank again so your next payout reaches you.
+          </div>
+        )}
         {account && step === 'view' ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <div className="modern-card p-4">
@@ -179,7 +185,7 @@ export default function SellerPayoutSettings() {
                 <p className="mb-0">1. A buyer purchases your listing — payment is held in escrow</p>
                 <p className="mb-0">2. Buyer confirms delivery — funds are released automatically</p>
                 <p className="mb-0">3. Platform fee is deducted (configured by admin)</p>
-                <p className="mb-0">4. Net amount is transferred to this bank account via Paystack</p>
+                <p className="mb-0">4. The rest is sent to this bank account by the payment company that handles marketplace payments</p>
               </div>
             </div>
           </motion.div>
@@ -192,7 +198,8 @@ export default function SellerPayoutSettings() {
 
               <div className="mb-3">
                 <label className="d-block mb-2" style={{ fontSize: 14, fontWeight: 500 }}>Select Bank <span style={{color:'red'}}>*</span></label>
-                <select className="modern-select w-100" value={selectedBank} onChange={e => setSelectedBank(e.target.value)}>
+                {banksError && <p className="po-error" role="alert">{banksError}</p>}
+                <select className="modern-select w-100" value={selectedBank} onChange={e => setSelectedBank(e.target.value)} disabled={!banks.length}>
                   <option value="">-- Select Bank --</option>
                   {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
                 </select>

@@ -1,3 +1,4 @@
+import { CheckerPhoto, checkerName } from '../components/CheckerDetails'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Layout } from '../components/Layout'
@@ -357,17 +358,22 @@ export default function LEAAlerts() {
                         <td className="fw-semibold">{alert.brand} {alert.model}</td>
                         <td><code className="small">{alert.imei || alert.serial || '-'}</code></td>
                         <td>
-                          <div className="small fw-medium">{alert.checker_name || 'Anonymous'}</div>
-                          <div className="text-muted small">{alert.checker_email || alert.checker_phone || ''}</div>
+                          <div className="d-flex gap-2 align-items-center">
+                            <CheckerPhoto url={(alert as any).selfie_url} size={40} />
+                            <div style={{ minWidth: 0 }}>
+                              <div className="small fw-medium">{checkerName(alert as any)}</div>
+                              <div className="text-muted small">{alert.checker_email || alert.checker_phone || ''}</div>
+                            </div>
+                          </div>
                         </td>
                         <td>
                           <div className="small"><Globe size={12} className="me-1" />{alert.ip_address || '-'}</div>
-                          <div className="text-muted small"><Monitor size={12} className="me-1" />{alert.mac_address || '-'}</div>
+                          <div className="text-muted small" title="Browser ID"><Monitor size={12} className="me-1" />{(alert as any).browser_device_id ? String((alert as any).browser_device_id).slice(0, 12) + '…' : '-'}</div>
                         </td>
                         <td>
                           <div className="small">
                             <MapPin size={12} className="me-1" />
-                            {alert.latitude && alert.longitude ? `${alert.latitude.toFixed(4)}, ${alert.longitude.toFixed(4)}` : 'Unknown'}
+                            {alert.latitude != null && alert.longitude != null ? <a href={`https://maps.google.com/?q=${Number(alert.latitude)},${Number(alert.longitude)}`} target="_blank" rel="noreferrer">{Number(alert.latitude).toFixed(4)}, {Number(alert.longitude).toFixed(4)}</a> : 'Unknown'}
                           </div>
                           <div className="text-muted small">±{alert.location_accuracy || 'n/a'}m</div>
                         </td>

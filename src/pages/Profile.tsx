@@ -19,7 +19,7 @@ import {
   AlertTriangle,
   Loader2
 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useToast, ToastContainer } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
@@ -67,10 +67,6 @@ export default function Profile() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'security' | 'activity'>('overview')
-  // Verifying opens the identity page (the same NIN check reports use);
-  // the old pop-up called routes that no longer exist and sat under the menus.
-  const navigate = useNavigate()
-  const openVerify = () => navigate('/identity-verification')
   
   const [formData, setFormData] = useState({
     name: '',
@@ -266,17 +262,6 @@ export default function Profile() {
               </div>
               
               <div className="d-flex gap-2 align-items-center flex-wrap w-100">
-                {/* KYC Buttons */}
-                {profile.kyc_status !== 'verified' && profile.kyc_status !== 'pending' && (
-                  <button 
-                    onClick={openVerify}
-                    className="btn d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm text-white border-0"
-                    style={{ background: 'var(--success-500)' }}
-                  >
-                    <Shield size={18} />
-                    Verify Identity
-                  </button>
-                )}
 
                 {profile.kyc_status === 'pending' && (
                   <button 
@@ -334,23 +319,13 @@ export default function Profile() {
           </div>
         </div>
 
-        {profile.kyc_status === 'failed' && (
-           <div className="alert alert-danger d-flex align-items-center gap-3 rounded-4 shadow-sm border-0 mb-4 px-4 py-3">
-             <AlertTriangle size={24} className="flex-shrink-0" />
-             <div>
-               <strong>Identity Verification Failed</strong>
-               <p className="mb-0 small">Your recent verification attempt failed. Please ensure your selfie is clear and try again.</p>
-             </div>
-             <button onClick={openVerify} className="btn btn-outline-danger btn-sm ms-auto px-3 rounded-pill">Retry</button>
-           </div>
-        )}
 
         {!!profile.caution_flag && (
            <div className="alert alert-warning d-flex align-items-center gap-3 rounded-4 shadow-sm border-0 mb-4 px-4 py-3">
              <AlertCircle size={24} className="flex-shrink-0" />
              <div>
                <strong>Account Caution</strong>
-               <p className="mb-0 small">Your account is flagged for caution. Please complete identity verification to remove this flag.</p>
+               <p className="mb-0 small">Your account is flagged for caution. Please contact support to resolve it.</p>
              </div>
            </div>
         )}
@@ -521,50 +496,12 @@ export default function Profile() {
               </div>
             </motion.div>
 
-            {/* Identity Verification Card - Prominent Call to Action */}
-            {profile.kyc_status !== 'verified' && profile.kyc_status !== 'pending' && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="card border-0 shadow-sm overflow-hidden mb-4"
-                style={{ 
-                  borderRadius: '16px', 
-                  background: 'linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%)',
-                  color: 'white'
-                }}
-              >
-                <div className="card-body p-4 position-relative">
-                  <div 
-                    className="position-absolute" 
-                    style={{ 
-                      top: '-20px', 
-                      right: '-20px', 
-                      opacity: 0.1, 
-                      transform: 'rotate(15deg)' 
-                    }}
-                  >
-                    <Shield size={120} />
-                  </div>
-                  
-                  <div className="position-relative z-1">
-                    <div className="mb-3 d-inline-flex p-2 rounded-circle bg-white bg-opacity-25">
-                      <Shield size={24} className="text-white" />
-                    </div>
-                    <h5 className="fw-bold mb-2">Verify Your Identity</h5>
-                    <p className="small mb-4 text-white-50">
-                      Unlock full access and build trust by verifying your NIN. It takes less than 2 minutes.
-                    </p>
-                <button 
-                  onClick={openVerify}
-                  className="btn w-100 fw-bold border-0 shadow-sm text-white"
-                  style={{ background: 'var(--primary-500)' }}
-                >
-                  Start Verification
-                </button>
-                  </div>
-                </div>
-              </motion.div>
+            {/* Identity is confirmed with the NIN when reporting an item */}
+            {profile.kyc_status !== 'verified' && (
+              <div className="po-card mb-4" data-testid="identity-note">
+                <h5 className="fw-bold mb-1" style={{ color: 'var(--text-primary)' }}><Shield size={18} aria-hidden="true" /> Your identity</h5>
+                <p className="small mb-0" style={{ color: 'var(--text-secondary)' }}>You don't need to do anything now. When you report an item stolen or lost, you'll enter your NIN and we'll confirm it matches the name on your account.</p>
+              </div>
             )}
 
             {/* Quick Actions Card */}

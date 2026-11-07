@@ -32,6 +32,7 @@ import {
   HelpCircle,
   User,
   Power,
+  Tag,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -82,7 +83,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
         { path: "/report-incident", label: "Report stolen or lost", icon: AlertOctagon },
         { path: "/reports", label: "My reports", icon: FileText },
         { path: "/claim", label: "Claim an item", icon: Scale },
-        { path: "/device-recovery", label: "Recovery help", icon: Shield },
       ],
     };
 
@@ -92,6 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
       icon: Search,
       items: [
         { path: "/device-check", label: "Check an item", icon: Search },
+        { path: "/check-certificate", label: "Verify a certificate", icon: ShieldCheck },
         { path: "/device-check-report", label: "Check history", icon: History },
       ],
     };
@@ -182,7 +183,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
       icon: RotateCcw,
       items: [
         { path: "/admin/custody", label: "Held items", icon: Landmark },
-        { path: "/admin/recovery", label: "Recovery services", icon: RotateCcw },
         { path: "/admin/lea-management", label: "Police agencies", icon: Shield },
       ],
     };
@@ -204,6 +204,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
       title: "Payments",
       icon: CreditCard,
       items: [
+        { path: "/admin/prices", label: "Prices", icon: Tag },
         { path: "/admin/modules", label: "Modules & payments", icon: Power },
         { path: "/admin/revenue", label: "Fees & revenue", icon: CreditCard },
         { path: "/admin/marketplace", label: "Marketplace listings", icon: Inbox },
