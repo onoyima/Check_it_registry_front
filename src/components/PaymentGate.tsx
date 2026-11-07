@@ -35,7 +35,13 @@ export function PaymentGate({ isOpen, onClose, feeType, feeLabel, description, o
       setError(null)
       try {
         const data = await apiClient.revenue.getFee(toFeeKey(feeType))
-        setFee({ amount: Number(data.amount) || 0, currency: data.currency || 'NGN' })
+        if (data.amount == null) {
+          // The admin hasn't set this price yet: nothing can be paid
+          setFee(null)
+          setError("This price hasn't been set yet. Please try again later.")
+          return
+        }
+        setFee({ amount: Number(data.amount), currency: data.currency || 'NGN' })
       } catch {
         setError('Unable to load fee information')
       } finally {

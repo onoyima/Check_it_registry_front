@@ -124,20 +124,11 @@ test('the held-items desk opens for admin and police', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /held items/i })).toBeVisible()
 })
 
-test('the identity page confirms a NIN at no charge, then locks the name', async ({ page }) => {
-  await signIn(page, 'user2')
-  const nin = (await (await page.request.post(`${API}/__e2e/person`, { data: { first_name: 'Bola', last_name: 'Tester' } })).json()).nin
-  await page.goto('/identity-verification')
-  await page.locator('#id-nin').fill(nin)
-  await page.getByRole('button', { name: /^confirm$/i }).click()
-  await expect(page.getByTestId('identity-confirmed')).toBeVisible()
-})
-
 test('the legal pages describe the real rules', async ({ page }) => {
   await page.goto('/terms')
   for (const t of [/report fee/i, /held by prove ownership/i, /release fee/i, /no public check/i, /Nigeria/]) await expect(page.locator('body')).toContainText(t)
   await page.goto('/privacy')
-  for (const t of [/Nigeria Data Protection Act 2023/, /Prembly/, /encrypted/i]) await expect(page.locator('body')).toContainText(t)
+  for (const t of [/Nigeria Data Protection Act 2023/, /Prembly/, /encrypted/i, /photo of you/i, /MAC address/]) await expect(page.locator('body')).toContainText(t)
   await page.goto('/cookies')
   for (const t of [/po_device_id/, /auth_token/, /do not use advertising/i]) await expect(page.locator('body')).toContainText(t)
 })

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search, Shield, AlertTriangle, CheckCircle, HelpCircle, QrCode, Loader2 } from 'lucide-react'
+import { Search, Shield, AlertTriangle, CheckCircle, HelpCircle, QrCode, Loader2, BadgeCheck, Copy, ArrowLeftRight } from 'lucide-react'
 import { CheckResult } from '../types/database'
 import { apiClient } from '../lib/apiClient'
 import { locationService } from '../services/LocationService'
@@ -13,6 +13,7 @@ import { MobileDeviceCheck } from '../components/mobile/MobileDeviceCheck'
 import { mobileIntegrationService } from '../services/MobileIntegrationService'
 import { Link } from 'react-router-dom'
 import OwnershipBadge from '../components/ownership/OwnershipBadge'
+import SelfieCapture from '../components/SelfieCapture'
 
 export default function DeviceCheck() {
   // Pre-fill from links such as /device-check?imei=... (landing page, login redirect)
@@ -29,7 +30,13 @@ export default function DeviceCheck() {
   const confirm = useConfirm()
   const navigate = useNavigate()
   const [showPayment, setShowPayment] = useState(false)
-  const [paymentBypass, setPaymentBypass] = useState<string | null>(null)
+  // A check waiting for the photo, or for payment, is kept here
+  const pending = useRef<any>(null)
+  const [selfieOpen, setSelfieOpen] = useState(false)
+  const [allowance, setAllowance] = useState<{ remaining: number; freeLimit: number | null; fee: number | null; notSet?: boolean } | null>(null)
+
+  const loadAllowance = () => apiClient.checkAllowance().then(setAllowance).catch(() => setAllowance(null))
+  useEffect(() => { loadAllowance() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Check if device is mobile
@@ -59,68 +66,65 @@ export default function DeviceCheck() {
     return true
   }
 
+  // 1. Location and browser details, 2. a photo of the person, 3. the check
+  // (4. payment, only for other people's items after the free checks)
   const handleCheck = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setResult(null)
     setEnhancedData(null)
-
-    if (!validateInput()) {
-      return
-    }
-
+    if (!validateInput()) return
     setLoading(true)
-
     try {
-      // Ensure location services are supported and permitted
       if (!locationService.isSupported()) {
         throw new Error('Location services are not supported by your browser')
       }
-
       const permission = await locationService.requestPermission()
       if (permission === 'denied') {
         throw new Error('Location access is required to perform device checks')
       }
-
       const locationData = await locationService.getLocationWithRetry(3)
-
-      // Generate device fingerprint and network info
       const fingerprint = await deviceFingerprintService.generateFingerprint()
       const networkInfo = await deviceFingerprintService.getNetworkInfo()
-      const securityMetadata = await deviceFingerprintService.getSecurityMetadata()
-      const fallbackIp = (networkInfo && networkInfo.ipAddress) ? networkInfo.ipAddress : '0.0.0.0'
-      const enrichedNetworkInfo = { 
-        ...networkInfo, 
-        ipAddress: fallbackIp,
-        ip: fallbackIp,
-        macAddress: securityMetadata.macAddress,
-        mac: securityMetadata.macAddress
-      }
-
-      const payload: any = {
+      pending.current = {
         deviceIdentifier: imei.trim() || serial.trim(),
         checkerLocation: locationData,
-        deviceFingerprint: {
-          ...fingerprint,
-          macAddress: securityMetadata.macAddress
-        },
-        networkInfo: enrichedNetworkInfo,
-        checkReason: 'purchase_check'
+        deviceFingerprint: fingerprint,
+        networkInfo,
+        checkReason: 'purchase_check',
       }
-      // The server expects the paid invoice reference as pay_by_pass
-      if (paymentBypass) payload.pay_by_pass = paymentBypass
+      setSelfieOpen(true)
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to check device'
+      setError(msg)
+      showError('Check Failed', msg)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-      const checkResult = await apiClient.publicCheckEnhanced(payload) 
+  const onPhoto = (dataUrl: string) => {
+    setSelfieOpen(false)
+    if (!pending.current) return
+    pending.current = { ...pending.current, selfie: dataUrl }
+    runCheck()
+  }
+
+  const runCheck = async (payToken?: string) => {
+    const payload = { ...pending.current, ...(payToken ? { pay_by_pass: payToken } : {}) }
+    setLoading(true)
+    setError('')
+    try {
+      const checkResult = await apiClient.publicCheckEnhanced(payload)
       if (checkResult && checkResult.requiresPayment) {
-        // Free checks used up: open the payment step, then the user checks again
-        setPaymentBypass(null)
+        // Other people's items, free checks used: pay, then the same check runs
         setShowPayment(true)
         return
       }
-      setPaymentBypass(null) // a payment unlocks one check only
+      pending.current = null
       setEnhancedData(checkResult)
+      loadAllowance()
 
-      // Map enhanced result to existing UI model
       const mapStatus = (s: string) => {
         if (s === 'legitimate') return 'verified'
         if (s === 'stolen') return 'stolen'
@@ -128,7 +132,6 @@ export default function DeviceCheck() {
         if (s === 'not_found') return 'not_found'
         return 'unknown'
       }
-
       const mapped: CheckResult = {
         status: mapStatus(checkResult.deviceStatus || ''),
         message: checkResult.success ? 'Enhanced check completed' : (checkResult.error || 'Check failed'),
@@ -136,9 +139,7 @@ export default function DeviceCheck() {
           ? 'Please contact local law enforcement immediately. Do not proceed with purchase.'
           : undefined
       }
-
       setResult(mapped)
-
       if (mapped.status === 'stolen' || mapped.status === 'lost') {
         showWarning('Device Alert', 'This device has been reported as stolen or lost')
       } else if (mapped.status === 'verified') {
@@ -146,15 +147,12 @@ export default function DeviceCheck() {
       } else if (mapped.status === 'not_found') {
         showWarning('Not Registered', 'This device is not registered on this system')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Check error:', err)
-      const base = (err && typeof err === 'object' && (err as any).message)
-        ? String((err as any).message)
-        : (err instanceof Error ? err.message : 'Failed to check device')
-      // The server adds the technical reason outside production
-      const detail = (err as any)?.data?.detail
+      const base = err?.message ? String(err.message) : 'Failed to check device'
+      const detail = err?.data?.detail
       const msg = detail ? `${base} (${detail})` : base
-      if (msg.toLowerCase().includes('payment') || msg.toLowerCase().includes('fee')) {
+      if (err?.data?.requiresPayment) {
         setShowPayment(true)
       } else {
         setError(msg)
@@ -303,7 +301,11 @@ export default function DeviceCheck() {
               {loading ? 'Checking…' : 'Check'}
             </button>
           </div>
-          <p className="po-help">On a phone, dial <strong>*#06#</strong> to see its IMEI. We ask for your location so owners know where their item was checked.</p>
+          <p className="po-help">On a phone, dial <strong>*#06#</strong> to see its IMEI. Every check records your location and a photo of you, taken with your camera.</p>
+          <p className="po-help" data-testid="check-allowance">
+            Checking your own items is free{allowance && allowance.freeLimit != null ? <>. Other people's items: <strong>{allowance.remaining}</strong> of {allowance.freeLimit} free checks left{allowance.fee != null && allowance.fee > 0 ? <>, then ₦{allowance.fee.toLocaleString()} each</> : null}</> : null}.
+            {' '}Buying from someone? Ask them to check it themselves and give you the certificate code, then <Link to="/check-certificate" className="po-link">verify the certificate</Link>.
+          </p>
           {isMobile && (
             <button type="button" className="po-btn po-btn-ghost po-btn-sm" onClick={() => setShowMobileFeatures((v) => !v)}>
               <QrCode size={16} aria-hidden="true" /> {showMobileFeatures ? 'Hide scanner' : 'Scan a code instead'}
@@ -327,7 +329,19 @@ export default function DeviceCheck() {
             {enhancedData?.custody?.held && (
               <p className="po-result-action" data-testid="custody-note"><strong>Held by Prove Ownership.</strong> Since it was reported, Prove Ownership is its temporary holder. It can't be bought, sold or transferred until it is released to its owner. If you have this item, contact the police or Prove Ownership.</p>
             )}
-            <p className="po-result-action">{advice.action}</p>
+            {!enhancedData?.ownItem && <p className="po-result-action">{advice.action}</p>}
+
+            {enhancedData?.certificate?.code && (
+              <div className="po-cert mt-3 text-start" data-testid="check-certificate">
+                <div className="d-flex align-items-center gap-2 mb-1"><BadgeCheck size={20} className="po-text-success" aria-hidden="true" /><strong>Your check certificate</strong></div>
+                <div className="po-cert-code" data-testid="certificate-code">{enhancedData.certificate.code}</div>
+                <p className="small mb-2" style={{ color: 'var(--text-secondary)' }}>Selling this item? Give this code to the buyer. They enter it under "Verify a certificate" to see this result and your name, then you transfer the item to them as they pay.</p>
+                <div className="d-flex flex-wrap gap-2">
+                  <button type="button" className="po-btn po-btn-secondary po-btn-sm" onClick={() => { navigator.clipboard?.writeText(enhancedData.certificate.code).then(() => showSuccess('Copied', 'Certificate code copied')).catch(() => {}) }}><Copy size={16} aria-hidden="true" /> Copy code</button>
+                  {enhancedData?.deviceDetails?.id && <Link to={`/transfer?device=${enhancedData.deviceDetails.id}`} className="po-btn po-btn-primary po-btn-sm"><ArrowLeftRight size={16} aria-hidden="true" /> Transfer to the buyer</Link>}
+                </div>
+              </div>
+            )}
 
             {(result.case_id || result.report_type || result.occurred_at) && (
               <dl className="po-rows po-result-rows">
@@ -351,10 +365,11 @@ export default function DeviceCheck() {
         isOpen={showPayment}
         onClose={() => setShowPayment(false)}
         feeType="device_check_fee"
-        feeLabel="Device Check"
-        description="Fee for performing a device status check"
-        onSuccess={(token) => { setPaymentBypass(token); setShowPayment(false); }}
+        feeLabel="Item check"
+        description="You've used your free checks of other people's items"
+        onSuccess={(token) => { setShowPayment(false); runCheck(token) }}
       />
+      <SelfieCapture open={selfieOpen} onCancel={() => { setSelfieOpen(false); pending.current = null }} onPhoto={onPhoto} />
     </Layout>
   )
 }

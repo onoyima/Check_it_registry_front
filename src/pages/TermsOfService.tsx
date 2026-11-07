@@ -3,7 +3,7 @@ import { Scale, Shield, AlertTriangle, UserCheck, CreditCard, Database, Lock, Ma
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 
-const lastUpdated = 'October 23, 2026'
+const lastUpdated = 'November 7, 2026'
 
 // Plain-language Terms. Fees are set by Prove Ownership's administrators and
 // always shown before you pay; the amounts below are therefore not fixed here.
@@ -23,7 +23,7 @@ We may update these Terms. We will show the new date at the top of this page and
     content: `With a Prove Ownership account you can:
 
 (a) register your phones, computers, vehicles, jewellery and other valuables, and prove that you own them;
-(b) check an item before you buy it, to see whether it is registered, reported stolen or lost, claimed by someone else or held by Prove Ownership;
+(b) check an item to see whether it is registered, reported stolen or lost, claimed by someone else or held by Prove Ownership, and check your own item to get a certificate you can show a buyer;
 (c) see who has checked your own items (your check history and tracker);
 (d) report an item stolen, lost or found, and have it held by Prove Ownership while it is missing;
 (e) transfer an item to a new owner;
@@ -76,7 +76,7 @@ Prove Ownership is a registry and notification service. We do not physically tra
   {
     icon: UserCheck,
     title: '6. Identity checks',
-    content: `6.1 Each time you file a report you enter your NIN. Business accounts may instead enter their business registration (RC/BN) number. You can also confirm your identity at any time on the "Your identity" page, at no charge.
+    content: `6.1 Each time you file a report you enter your NIN. Business accounts may instead enter their business registration (RC/BN) number. There is no separate identity step: your NIN is only asked for when you report an item, or during business verification.
 
 6.2 We confirm the number with our identity partner, Prembly, which checks it against the National Identity Management Commission (NIMC) record, or the Corporate Affairs Commission (CAC) record for businesses. We save the details returned, encrypted, so the same number does not need to be looked up again. Later checks compare the number you enter, and the saved details, with the name on your account.
 
@@ -105,11 +105,13 @@ Prove Ownership is a registry and notification service. We do not physically tra
   {
     icon: Globe,
     title: '8. Checking items',
-    content: `8.1 Checks are for signed-in users. A number of free checks may be included; after that, each check has a check fee, shown before you pay.
+    content: `8.1 Checks are for signed-in users. Checking an item registered in your own name is free. Checks of items that are not yours are free up to a number set by our administrators; after that, each such check has a check fee, shown before you pay.
 
-8.2 For safety and fraud prevention, a check records who checked and roughly where (your device location, which your browser asks your permission to share), plus technical details of your device. The item's owner can see who checked their item and when, and the police can see check history for reported items.
+8.2 When you sell an item yourself, check it on Prove Ownership and give the buyer the certificate code you receive. The buyer can confirm the code for free, and you then transfer the item to the buyer on Prove Ownership as they pay. Buyers should not rely on a seller's screenshot instead of the code.
 
-8.3 A check shows the item's status in our registry at that moment. It is not a guarantee about the item's history or condition. Always inspect an item and its documents before you buy.`
+8.3 For safety and to trace stolen items, every check records who checked, your live location (your browser asks your permission to share it), a photo of you taken with your camera, your IP address, a browser ID and technical details of your device. A check cannot be made without the location and the photo. The item's owner can see who checked their item, when and where; the photo and network details are seen only by our staff and the police.
+
+8.4 A check shows the item's status in our registry at that moment. It is not a guarantee about the item's history or condition. Always inspect an item and its documents before you buy.`
   },
   {
     icon: CreditCard,

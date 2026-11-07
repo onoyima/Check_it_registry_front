@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Settings, Shield, Bell, Smartphone, Globe, Clock, Save, RefreshCw, Lock, Key, Users, DollarSign, TrendingUp } from 'lucide-react'
 import { useToast, ToastContainer } from '../components/Toast'
@@ -27,8 +28,6 @@ export default function AdminSystemSettings() {
     maxLoginAttempts: 5, passwordMinLength: 8
   })
   const [saving, setSaving] = useState(false)
-  const [platformFee, setPlatformFee] = useState('2.50')
-  const [loadingFee, setLoadingFee] = useState(true)
 
   const { toasts, removeToast, showSuccess, showError } = useToast()
 
@@ -39,14 +38,6 @@ export default function AdminSystemSettings() {
       try {
         const token = localStorage.getItem('auth_token')
         const API_URL = import.meta.env.VITE_API_URL || '/api'
-
-        const feeRes = await fetch(`${API_URL}/escrow/admin/settings`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        if (feeRes.ok) {
-          const feeData = await feeRes.json()
-          if (feeData.platformFeePercent) setPlatformFee(String(feeData.platformFeePercent))
-        }
 
         const sysRes = await fetch(`${API_URL}/admin-system/settings`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -71,7 +62,7 @@ export default function AdminSystemSettings() {
             passwordMinLength: s.security_password_min_length || 8,
           })
         }
-      } catch { /* use defaults */ } finally { setLoadingFee(false) }
+      } catch { /* use defaults */ }
     }
     fetchSettings()
   }, [])
@@ -84,16 +75,6 @@ export default function AdminSystemSettings() {
     try {
       const token = localStorage.getItem('auth_token')
       const API_URL = import.meta.env.VITE_API_URL || '/api'
-
-      const feeNum = parseFloat(platformFee)
-      if (isNaN(feeNum) || feeNum < 0 || feeNum > 100) throw new Error('Fee must be between 0 and 100')
-
-      const feeRes = await fetch(`${API_URL}/escrow/admin/settings`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform_fee_percent: feeNum })
-      })
-      if (!feeRes.ok) { const d = await feeRes.json(); throw new Error(d.error || 'Save failed') }
 
       const sysSettings: Record<string, any> = {
         feature_marketplace: featureFlags.marketplace,
@@ -267,33 +248,10 @@ export default function AdminSystemSettings() {
                 </div>
               </div>
 
-              <motion.div variants={itemVariants} className="modern-card mt-4">
-                <div className="p-4 border-bottom d-flex align-items-center gap-3" style={{ borderBottomColor: 'var(--border-color)' }}>
-                  <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success-500)' }}>
-                    <DollarSign size={22} />
-                  </div>
-                  <div>
-                    <h3 className="h5 mb-1" style={{ color: 'var(--text-primary)' }}>Platform Fee</h3>
-                    <small style={{ color: 'var(--text-tertiary)' }}>Escrow fee charged on marketplace sales</small>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <label className="d-block mb-2" style={{ color: 'var(--text-primary)', fontWeight: 500, fontSize: 14 }}>
-                    Fee Percentage <TrendingUp size={14} style={{ color: 'var(--text-secondary)' }} />
-                  </label>
-                  <div className="d-flex align-items-center gap-3">
-                    <input type="number" step="0.01" min="0" max="100" className="modern-input" style={{ maxWidth: 140, padding: '10px 14px', fontSize: 18, fontWeight: 600 }}
-                      value={platformFee}
-                      onChange={e => setPlatformFee(e.target.value)}
-                      disabled={loadingFee} />
-                    <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>%</span>
-                    {loadingFee && <div className="spinner-border spinner-border-sm" />}
-                  </div>
-                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
-                    This fee is deducted from the seller's payout when a buyer confirms delivery.
-                    For example, a 2.5% fee on a ₦100,000 sale deducts ₦2,500 (seller receives ₦97,500).
-                  </p>
-                </div>
+              <motion.div variants={itemVariants} className="modern-card mt-4 p-4">
+                <h3 className="h5 mb-1" style={{ color: 'var(--text-primary)' }}><DollarSign size={18} /> Prices and commission</h3>
+                <p className="mb-2" style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Fees and the marketplace commission are set on the Prices page.</p>
+                <Link to="/admin/prices" className="po-btn po-btn-secondary po-btn-sm">Open Prices</Link>
               </motion.div>
 
               <motion.div variants={itemVariants} className="modern-card mt-4">

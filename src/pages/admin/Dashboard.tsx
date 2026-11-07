@@ -118,7 +118,7 @@ export default function AdminDashboard() {
           active_sessions: data.system_health?.active_users || data.active_sessions || 0
         },
         escrow: data.escrow || { total_transactions: 0, held: 0, released: 0, disputed: 0, refunded: 0, total_held_amount: 0, total_fees_collected: 0 },
-        platform_fee_percent: data.platform_fee_percent || '2.50'
+        platform_fee_percent: data.platform_fee_percent ?? '—'
       }
 
       setMonthlyGrowthData(data.monthly_user_growth || [])

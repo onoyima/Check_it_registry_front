@@ -3,7 +3,7 @@ import { Shield, Scale, Lock, Eye, Database, Mail, ArrowLeft, Globe, UserCheck, 
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 
-const lastUpdated = 'October 23, 2026'
+const lastUpdated = 'November 7, 2026'
 
 // Plain-language privacy notice under the Nigeria Data Protection Act 2023.
 const sections = [
@@ -23,7 +23,7 @@ Identity: your National Identification Number (NIN) and, when we look it up, the
 
 Your items: descriptions and identifying numbers (IMEI, serial, VIN, certificate numbers), proof-of-ownership documents and photos, reports, claims, transfers and listings.
 
-Checks: when you check an item we record who checked, when, your approximate location (your browser asks your permission to share it) and technical details of your device and connection (browser, device identifiers, IP address), to prevent fraud.
+Checks: when you check an item we record who checked and when, the item searched for, your live location (your browser asks your permission to share it), a photo of you taken with your camera at the time of the check, the IP address your request came from, a random ID kept in your browser (po_device_id), and technical details of your browser and device (for example browser version, screen, time zone and language). We do this to prevent the trade in stolen items and so that stolen items can be traced. Websites cannot read your device's MAC address, and we do not collect it. If you check your own item we also record a certificate code, which anyone you give it to can use to view the result, your name and the item.
 
 Payments: amount, purpose, payment reference and status. Card details are handled by Paystack; we never see or store them.
 
@@ -53,7 +53,8 @@ We do not sell your personal data, and we do not use it for automated decisions 
 • Paystack (payments).
 • Our email and SMS providers, to send you messages.
 • The police and law enforcement agencies: details of reported items, holds, finds, owners and check history needed for a case, and anything we are lawfully required to provide.
-• Owners of items you check: your name and the time and approximate place of the check.
+• Owners of items you check: your name and the time and place of the check. Your photo, IP address and browser ID are not shown to them.
+• People you give a check certificate code to: your name, the item, the date of the check and whether the item is still in your name and unreported.
 • Buyers and sellers on the marketplace: the details needed to complete a sale.
 • Our hosting and technical providers, under contracts that require them to protect your data.
 • A buyer or successor of our business, under the same protections.`
@@ -61,14 +62,14 @@ We do not sell your personal data, and we do not use it for automated decisions 
   {
     icon: Lock,
     title: '5. How we protect it',
-    content: `NINs and identity details are encrypted at rest. Data is sent over encrypted connections, access is limited to staff who need it, and administrator and police accounts use two-step sign-in. Proof documents are private and can only be opened by you and our reviewers. No system is perfectly secure. If a breach is likely to put you at risk, we will tell you and the NDPC as the law requires.`
+    content: `NINs and identity details are encrypted at rest. Data is sent over encrypted connections, access is limited to staff who need it, and administrator and police accounts use two-step sign-in. Proof documents and the photos taken at checks are private: they can only be opened by you, our staff and the police. No system is perfectly secure. If a breach is likely to put you at risk, we will tell you and the NDPC as the law requires.`
   },
   {
     icon: Database,
     title: '6. How long we keep it',
     content: `• Account and item records: while your account is open, then for up to 2 years so ownership history and disputes can still be resolved.
 • Identity records (NIN or CAC details): while your account is open, then 2 years, so the same number cannot be used to create new accounts straight away.
-• Reports, holds, releases and check history: 6 years, as they may be needed by the police or the courts.
+• Reports, holds, releases and check history, including the photos taken at checks: 6 years, as they may be needed by the police or the courts.
 • Payment records: 6 years, as required for tax and accounting.
 • Security logs: up to 12 months.
 After these periods data is deleted or anonymised.`

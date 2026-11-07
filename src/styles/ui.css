@@ -653,3 +653,32 @@ main .stat-card, main [class*="stat-tile"] { padding: 16px !important; }
 /* Note shown to admins on a switched-off module */
 .po-module-off-note { position: sticky; top: 0; z-index: 1040; padding: 8px 16px; text-align: center; font-size: 0.9rem; background: #fef3c7; color: #92400e; border-bottom: 1px solid #fcd34d; }
 .po-module-off-note a { color: inherit; font-weight: 600; text-decoration: underline; }
+
+/* Photo of the person checking an item */
+.po-selfie { max-width: 420px; }
+.po-selfie-frame { position: relative; width: 100%; aspect-ratio: 1 / 1; border-radius: 14px; overflow: hidden; background: #0f172a; }
+.po-selfie-frame video, .po-selfie-frame img { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+.po-selfie-frame img { transform: none; }
+.po-selfie-wait { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; }
+
+/* Check certificate */
+.po-cert { border: 2px dashed var(--success-500); border-radius: 16px; padding: 16px; background: var(--po-success-bg, #ecfdf5); }
+.po-cert-code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 22px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-primary); overflow-wrap: anywhere; }
+
+/* Who checked an item (admin and police) */
+.po-checker { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; align-items: start; }
+.po-checker-photo { width: 72px; height: 72px; border-radius: 12px; overflow: hidden; background: var(--bg-tertiary); }
+.po-checker-photo .po-file { height: 72px !important; }
+.po-checker-photo img { width: 72px; height: 72px; object-fit: cover; }
+.po-checker dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 10px; margin: 6px 0 0; font-size: 13px; }
+.po-checker dt { color: var(--text-tertiary); font-weight: 500; }
+.po-checker dd { margin: 0; color: var(--text-primary); overflow-wrap: anywhere; }
+
+/* Admin prices */
+.po-price-row { display: grid; grid-template-columns: minmax(0, 1fr) 180px auto; gap: 12px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border-color); }
+.po-price-row:last-child { border-bottom: 0; }
+.po-price-input { display: flex; align-items: center; gap: 6px; }
+.po-price-input input { min-width: 0; }
+@media (max-width: 640px) { .po-price-row { grid-template-columns: minmax(0, 1fr) auto; } .po-price-row .po-price-main { grid-column: 1 / -1; } }
+.po-alert { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; font-size: 14px; }
+.po-alert-warning { background: var(--po-warning-bg, #fffbeb); color: var(--po-warning-fg, #92400e); border: 1px solid var(--po-warning-bd, #fcd34d); }

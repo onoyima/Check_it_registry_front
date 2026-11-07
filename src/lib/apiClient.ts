@@ -897,6 +897,11 @@ class ApiClient {
     }
   };
 
+  // Free checks of other people's items left, and the price after that
+  checkAllowance = async () => this.request('/public-check/allowance');
+  // A buyer confirms a seller's check certificate
+  verifyCertificate = async (code: string) => this.request(`/public-check/certificate/${encodeURIComponent(code)}`);
+
   publicStats = async () => {
     return this.request('/public-check/stats');
   };
@@ -929,6 +934,10 @@ class ApiClient {
   revenue = {
     getFee: (feeKey: string) => this.request(`/revenue-admin/fees/${feeKey}`),
     listFees: () => this.request('/revenue-admin/fees'),
+    // The admin's price list (Prices page)
+    listPrices: () => this.request('/revenue-admin/prices'),
+    setPrice: (key: string, value: string | number) =>
+      this.request(`/revenue-admin/prices/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
     setFee: (feeKey: string, value: number) =>
       this.request(`/revenue-admin/fees/${feeKey}`, {
         method: 'PUT', body: JSON.stringify({ value }),
@@ -983,7 +992,7 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    verifyCAC: (data: { rcNumber: string; businessName?: string; companyType?: string; pay_by_pass?: string }) =>
+    verifyCAC: (data: { rcNumber: string; nin?: string; businessName?: string; companyType?: string; pay_by_pass?: string }) =>
       this.request('/security/cac/verify', {
         method: 'POST',
         body: JSON.stringify(data),

@@ -1,3 +1,4 @@
+import CheckerDetails from '../components/CheckerDetails'
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -177,24 +178,7 @@ export default function AdminDeviceDetails() {
                     <ul className="list-group list-group-flush">
                       {data.check_history.map(ch => (
                         <li key={ch.id} className="list-group-item">
-                          <div className="d-flex align-items-start">
-                            <div className="flex-grow-1">
-                              <div className="fw-medium">
-                                {ch.check_result || 'result'} • {ch.query || 'query'}
-                              </div>
-                              <div className="text-muted small">
-                                {(ch.location_address || ch.ip_address) ? `${ch.location_address || ''}${ch.location_address && ch.ip_address ? ' • ' : ''}${ch.ip_address || ''}` : ''}
-                              </div>
-                              {ch.checker_name || ch.checker_email ? (
-                                <div className="text-muted small">
-                                  {ch.checker_name || ''}{ch.checker_name && ch.checker_email ? ' • ' : ''}{ch.checker_email || ''}
-                                </div>
-                              ) : null}
-                            </div>
-                            <div className="ms-3 text-muted small">
-                              {ch.created_at ? new Date(ch.created_at).toLocaleString() : ''}
-                            </div>
-                          </div>
+                          <CheckerDetails check={ch as any} />
                         </li>
                       ))}
                     </ul>

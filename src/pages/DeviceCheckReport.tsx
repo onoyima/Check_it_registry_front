@@ -1,3 +1,4 @@
+import PrivateFile from '../components/ownership/PrivateFile'
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -384,7 +385,7 @@ export default function DeviceCheckReport() {
                         </div>
                         <div className="row g-2" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                           <div className="col-6"><Globe size={12} className="me-1" />IP: {record.check?.ip_address || '—'}</div>
-                          <div className="col-6"><Monitor size={12} className="me-1" />MAC: {record.check?.mac_address || '—'}</div>
+                          <div className="col-6"><Monitor size={12} className="me-1" />Browser ID: {(record.check as any)?.browser_device_id ? String((record.check as any).browser_device_id).slice(0, 12) + '…' : '—'}</div>
                           <div className="col-12 mt-2">
                             <Eye size={12} className="me-1" />User-Agent: {parsedFingerprint?.userAgent || record.check?.user_agent || '—'}
                           </div>
@@ -442,6 +443,12 @@ export default function DeviceCheckReport() {
                         <span className={`status-badge ${record.checker?.id ? 'status-verified' : 'status-found'}`}>
                           {record.checker?.id ? 'Identified' : 'Public'}
                         </span>
+                        {(record.check as any)?.selfie_url && (
+                          <div className="mt-3" data-testid="check-photo">
+                            <div className="small mb-1" style={{ color: 'var(--text-secondary)' }}>Photo taken at the check</div>
+                            <PrivateFile fileUrl={(record.check as any).selfie_url} label="Photo of the person who checked" height={200} />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
