@@ -13,6 +13,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { ConfirmProvider } from './components/ConfirmDialog'
 import ErrorBoundary from './components/ErrorBoundary'
 import PageLoading from './components/PageLoading'
+import SocialWidget from './components/SocialWidget'
 import { landingVariantsEnabled } from './lib/landingVariants'
 
 const LandingPage = lazy(() => import('./pages/LandingPage'))
@@ -258,6 +259,7 @@ function App() {
           </ToastProvider>
         </CartProvider>
         </ModulesProvider>
+        <SocialWidget />
       </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

@@ -1583,3 +1583,46 @@ code, pre, kbd, samp {
   border-top: 1px solid var(--border-color);
   padding: 16px 24px;
 }
+
+/* ================ FLOATING SOCIAL WIDGET ================ */
+.social-widget {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1030;
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-radius: 0 14px 14px 0;
+  box-shadow: 2px 4px 18px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.social-widget__link {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.social-widget__link:hover,
+.social-widget__link:focus-visible {
+  color: #fff;
+  background: var(--social-color, var(--primary-600));
+  transform: translateX(3px);
+  outline: none;
+}
+
+@media (max-width: 991px) {
+  .social-widget {
+    display: none;
+  }
+}
