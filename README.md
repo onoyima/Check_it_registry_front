@@ -77,3 +77,28 @@ The dev server proxies `/api` requests to the backend via Vite's proxy config.
 - All API calls use `fetch()` directly with JWT Bearer tokens
 - Role gating via `Layout` component with `allowedRoles` prop
 - See root `README.md` for full project documentation
+
+
+## Payment webhooks
+
+Two domains are involved:
+- **API domain** (webhooks hit the backend): `api.proveownership.com` per the deploy workflow
+- **Frontend domain** (browser return): the server's `FRONTEND_URL` (should be `https://proveownership.com`; the local `.env` still says `dev.proveownership.com`)
+
+Set these in the provider dashboards:
+
+| Provider | Webhook URL | Callback / Redirect URL |
+| --- | --- | --- |
+| Paystack | `https://api.proveownership.com/api/payments/webhook/paystack` | `https://proveownership.com/payment/callback` |
+| Monnify | `https://api.proveownership.com/api/payments/webhook/monnify` | `https://proveownership.com/payment/callback` |
+| Flutterwave | `https://api.proveownership.com/api/payments/webhook/flutterwave` | `https://proveownership.com/payment/callback` |
+| OPay | Not integrated — no URL to set | — |
+| Vesicash | Not wired yet — no URL to set | — |
+
+Notes:
+- Don't add query strings to the callback URL in the dashboards. The backend appends them itself (`?kind=fee`, `?reference=...&provider=...`).
+- **Paystack:** webhook signature is verified with `PAYSTACK_SECRET_KEY`. A callback is also sent per transaction, so the dashboard callback is just a fallback.
+- **Monnify:** verified with `MONNIFY_SECRET_KEY` (HMAC-SHA512 of the raw body). Monnify also requires the redirect URL and often the server IP to be whitelisted in the dashboard.
+- **Flutterwave:** set the Secret hash in the dashboard to exactly match `FLW_SECRET_HASH` in `.env`; it is checked via the `verif-hash` header.
+- **Domain mismatch:** the deploy workflow calls `https://api.proveownership.com`, but the local `.env` uses `https://backend.proveownership.com`. Use whichever subdomain actually proxies to the backend on CyberPanel; if it is `backend.`, swap it in all three webhook URLs. Also make sure the server `FRONTEND_URL` is the real live site, because the backend builds the callback from it.
+- **OPay** is not in the codebase at all, so there is nothing to configure for it yet.
