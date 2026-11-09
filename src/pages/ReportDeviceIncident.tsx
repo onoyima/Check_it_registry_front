@@ -114,7 +114,7 @@ export default function ReportDeviceIncident() {
   const [useRc, setUseRc] = useState(false)
   const [rcInput, setRcInput] = useState('')
   const isBusiness = user?.role === 'business'
-  const rememberPaid = (ref: string) => { setPaidRef(ref); try { ref ? sessionStorage.setItem(PAID_KEY, ref) : sessionStorage.removeItem(PAID_KEY) } catch { /* storage blocked */ } }
+  const rememberPaid = (ref: string) => { setPaidRef(ref); try { if (ref) sessionStorage.setItem(PAID_KEY, ref); else sessionStorage.removeItem(PAID_KEY) } catch { /* storage blocked */ } }
 
   const [showPayment, setShowPayment] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState<number | null>(null)

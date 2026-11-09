@@ -957,7 +957,7 @@ class ApiClient {
       return this.request(`/revenue-admin/summary${query}`);
     },
     // Amount is set by the server from the fee settings; returns a Paystack link
-    createInvoice: (data: { fee_type: string; description?: string }) =>
+    createInvoice: (data: { fee_type: string; description?: string; return_to?: string }) =>
       this.request('/revenue-admin/create-invoice', {
         method: 'POST',
         body: JSON.stringify(data),

@@ -55,6 +55,7 @@ for (const size of WIDTHS) {
             await expectNoSideScroll(page)
             w.expectClean()
           } catch (e: any) {
+            // eslint-disable-next-line no-control-regex
             failures.push(`${path}: ${String(e.message).replace(/\u001b\[\d+m/g, '').split('\n').filter(Boolean).slice(0, 2).join(' | ')}`)
           }
           const file = `${role}_${path.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'home'}_${size.width}.png`

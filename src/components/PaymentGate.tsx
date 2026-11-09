@@ -50,23 +50,37 @@ export function PaymentGate({ isOpen, onClose, feeType, feeLabel, description, o
     })()
   }, [isOpen, feeType])
 
-  // While the Paystack tab is open, check every 5 s whether the payment landed
+  // While the Paystack tab is open, check whether the payment landed. Polling
+  // covers the wait; re-checking as soon as this tab regains focus means the
+  // user is unlocked the moment the Paystack tab returns them here.
   useEffect(() => {
     if (!isOpen || !reference) return
     let stopped = false
     const started = Date.now()
-    const timer = window.setInterval(async () => {
-      if (stopped || Date.now() - started > 10 * 60 * 1000) { window.clearInterval(timer); return }
+    const check = async () => {
+      if (stopped) return
       try {
         const res = await apiClient.revenue.verifyInvoice(reference)
         if (res && res.paid && !stopped) {
           stopped = true
-          window.clearInterval(timer)
           onSuccessRef.current(reference)
         }
       } catch { /* keep waiting */ }
+    }
+    const timer = window.setInterval(() => {
+      if (Date.now() - started > 10 * 60 * 1000) { window.clearInterval(timer); return }
+      check()
     }, 5000)
-    return () => { stopped = true; window.clearInterval(timer) }
+    const onFocus = () => { check() }
+    const onVisible = () => { if (document.visibilityState === 'visible') check() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [isOpen, reference])
 
   // Step 1: create the invoice on the server and open Paystack in a new tab
@@ -77,6 +91,8 @@ export function PaymentGate({ isOpen, onClose, feeType, feeLabel, description, o
       const invoice = await apiClient.revenue.createInvoice({
         fee_type: toFeeKey(feeType),
         description: `${feeLabel} - ${description}`,
+        // After paying, send the user back to the page they started from.
+        return_to: window.location.pathname + window.location.search,
       })
       if (invoice && invoice.requiresPayment === false) {
         onSuccess('')
@@ -87,7 +103,9 @@ export function PaymentGate({ isOpen, onClose, feeType, feeLabel, description, o
       }
       setReference(invoice.reference)
       setPayUrl(invoice.authorization_url)
-      window.open(invoice.authorization_url, '_blank', 'noopener')
+      // No `noopener`: the callback tab needs the opener reference to return
+      // the user to this page (and focus it) after a successful payment.
+      window.open(invoice.authorization_url, '_blank')
     } catch (e: any) {
       setError(e.message || 'Failed to start payment')
     } finally {

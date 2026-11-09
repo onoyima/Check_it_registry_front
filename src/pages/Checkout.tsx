@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { ShoppingCart, Shield, CreditCard, Loader2, CheckCircle, AlertTriangle, ArrowLeft, MapPin } from 'lucide-react'
+import { ShoppingCart, Shield, CreditCard, Loader2, AlertTriangle, ArrowLeft, MapPin } from 'lucide-react'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
@@ -18,14 +17,12 @@ const PAYSTACK_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || ''
 export default function Checkout() {
   const { user } = useAuth()
   const { items: cartItems, clearCart, total: cartTotal } = useCart()
-  const _navigate = useNavigate()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { toasts, removeToast, showSuccess, showError } = useToast()
+  const { toasts, removeToast, showError } = useToast()
   const [listing, setListing] = useState<Listing | null>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
-  const [completed, setCompleted] = useState(false)
-  const [result, setResult] = useState<any>(null)
   const [agreed, setAgreed] = useState(false)
 
   const listingId = searchParams.get('listing') || ''
@@ -95,9 +92,7 @@ export default function Checkout() {
                 const completeData = await completeRes.json()
                 if (!completeRes.ok) throw new Error(completeData.error || 'Failed')
                 clearCart()
-                setCompleted(true)
-                setResult(completeData)
-                showSuccess('Purchase successful! Funds held securely in escrow.')
+                navigate('/orders', { replace: true, state: { justPurchased: true } })
               } else { showError('Payment was not successful') }
               setProcessing(false)
             },
@@ -136,9 +131,7 @@ export default function Checkout() {
                 })
                 const completeData = await completeRes.json()
                 if (!completeRes.ok) throw new Error(completeData.error || 'Failed to complete purchase')
-                setCompleted(true)
-                setResult(completeData)
-                showSuccess('Purchase successful! Funds held securely in escrow.')
+                navigate('/orders', { replace: true, state: { justPurchased: true } })
               } catch (err: any) { showError(err.message) }
             } else { showError('Payment was not successful') }
             setProcessing(false)
@@ -184,43 +177,6 @@ export default function Checkout() {
               <div className="d-flex justify-content-center py-5">
                 <Loader2 size={32} className="spinner-border" style={{ color: 'var(--primary-600)' }} />
               </div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    )
-  }
-
-  if (completed) {
-    return (
-      <Layout requireAuth>
-        <div className="container-fluid">
-          <div className="row justify-content-center">
-            <div className="col-lg-8">
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-                <div className="modern-card p-5 text-center">
-                  <div className="d-flex align-items-center justify-content-center rounded-circle mx-auto mb-4" style={{ width: 80, height: 80, background: 'var(--success-50)' }}>
-                    <CheckCircle size={48} style={{ color: 'var(--success-500)' }} />
-                  </div>
-                  <h3>Purchase Complete!</h3>
-                  <p style={{ color: 'var(--text-secondary)' }}>Your order has been placed successfully.</p>
-                  {result?.escrowId && (
-                    <div className="alert alert-info mx-auto" style={{ maxWidth: 450 }}>
-                      <Shield size={16} className="me-2" />
-                      <strong>Escrow Protection Active</strong>
-                      <p className="mb-0 mt-1" style={{ fontSize: 13 }}>
-                        Your payment of <strong>₦{Number(totalAmount || 0).toLocaleString()}</strong> is held in escrow.
-                        Funds will be released to sellers only after you confirm delivery.
-                      </p>
-                    </div>
-                  )}
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Track your orders from My Orders.</p>
-                  <div className="d-flex gap-3 justify-content-center mt-4">
-                    <Link to="/orders" className="btn-gradient-primary">View My Orders</Link>
-                    <Link to="/marketplace/browse" className="btn-outline-primary">Continue Shopping</Link>
-                  </div>
-                </div>
-              </motion.div>
             </div>
           </div>
         </div>

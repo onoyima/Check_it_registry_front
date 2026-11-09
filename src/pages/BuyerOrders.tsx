@@ -5,7 +5,7 @@ import { Layout } from '../components/Layout'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast, ToastContainer } from '../components/Toast'
 import { useConfirm } from '../components/ConfirmDialog'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 type Order = {
   escrow_id: string
@@ -32,9 +32,19 @@ export default function BuyerOrders() {
   const { user: _user } = useAuth()
   const { toasts, removeToast, showSuccess, showError } = useToast()
   const confirm = useConfirm()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'held' | 'released' | 'disputed'>('all')
+  const [justPurchased, setJustPurchased] = useState(false)
+
+  useEffect(() => {
+    if ((location.state as any)?.justPurchased) {
+      setJustPurchased(true)
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, [location.state, location.pathname, navigate])
 
   const fetchOrders = async () => {
     try {
@@ -121,6 +131,13 @@ export default function BuyerOrders() {
           </div>
           <button className="btn btn-sm btn-outline-secondary" onClick={fetchOrders}>Refresh</button>
         </div>
+
+        {justPurchased && (
+          <div className="alert alert-success d-flex align-items-center gap-2" role="status">
+            <CheckCircle size={18} />
+            <span>Payment successful — your new order is held safely in escrow.</span>
+          </div>
+        )}
 
         <div className="d-flex gap-2 mb-4">
           {(['all', 'held', 'released', 'disputed'] as const).map(f => (

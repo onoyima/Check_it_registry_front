@@ -20,7 +20,7 @@ export default function BusinessVerification() {
   const [error, setError] = useState('')
   const [showPay, setShowPay] = useState(false)
   const [paid, setPaid] = useState<string>(() => { try { return sessionStorage.getItem(PAID_KEY) || '' } catch { return '' } })
-  const remember = (ref: string) => { setPaid(ref); try { ref ? sessionStorage.setItem(PAID_KEY, ref) : sessionStorage.removeItem(PAID_KEY) } catch { /* blocked */ } }
+  const remember = (ref: string) => { setPaid(ref); try { if (ref) sessionStorage.setItem(PAID_KEY, ref); else sessionStorage.removeItem(PAID_KEY) } catch { /* blocked */ } }
 
   const load = () => apiClient.security.getVerificationStatus()
     .then((s: any) => { setStatus(s); if (s?.rcNumber && !rc) setRc(String(s.rcNumber).toUpperCase()) })
