@@ -54,7 +54,26 @@ jobs:
             -e "ssh -i ~/.ssh/deploy_key" \
             dist/ prove-deploy@${{ secrets.VPS_HOST }}:/home/proveownership.com/public_html/
 
-      - name: Verify SPA rewrite
+      - name: Reload OpenLiteSpeed rewrite rules
         run: |
           ssh -i ~/.ssh/deploy_key "prove-deploy@${{ secrets.VPS_HOST }}" \
-            "test -f /home/proveownership.com/public_html/.htaccess && grep -q 'index.html' /home/proveownership.com/public_html/.htaccess && echo 'SPA rewrite (.htaccess) is in place'"
+            'sudo -n /usr/local/lsws/bin/lswsctrl restart >/dev/null 2>&1 && echo "OpenLiteSpeed restarted" || echo "::warning::OpenLiteSpeed restart skipped (passwordless sudo unavailable)"'
+
+      - name: Verify SPA deep links
+        run: |
+          for path in /login /dashboard /device-check; do
+            status=""
+            for i in $(seq 1 10); do
+              status=$(curl -sS -o /dev/null -w "%{http_code}" "https://proveownership.com${path}" || true)
+              if [ "$status" = "200" ]; then
+                break
+              fi
+              sleep 2
+            done
+            echo "${path} -> ${status}"
+            if [ "$status" != "200" ]; then
+              echo "::error::SPA route ${path} returned ${status}. Enable OpenLiteSpeed 'Auto Load from .htaccess' for proveownership.com and restart OLS."
+              exit 1
+            fi
+          done
+          echo "SPA deep-link fallback is working."
