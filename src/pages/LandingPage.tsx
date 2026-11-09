@@ -28,7 +28,7 @@ import {
   Building2,
   UserSquare2
 } from 'lucide-react';
-import { FaFacebookF, FaXTwitter, FaLinkedinIn, FaInstagram, FaWhatsapp } from 'react-icons/fa6';
+import { FaWhatsapp } from 'react-icons/fa6';
 import { apiClient } from '../lib/apiClient';
 import { companyInfo } from '../lib/companyInfo';
 import { landingVariantsEnabled, landingVersions } from '../lib/landingVariants';
@@ -891,24 +891,6 @@ export default function LandingPage() {
                     ))}
                   </span>
                 </div>
-              </div>
-              <div className="d-flex flex-row flex-lg-column gap-3 mt-3">
-                {[
-                  { name: 'facebook', icon: FaFacebookF, href: '#facebook' },
-                  { name: 'twitter', icon: FaXTwitter, href: '#twitter' },
-                  { name: 'linkedin', icon: FaLinkedinIn, href: '#linkedin' },
-                  { name: 'instagram', icon: FaInstagram, href: '#instagram' }
-                ].map((social) => (
-                  <a key={social.name} href={social.href} className="d-inline-flex align-items-center justify-content-center rounded-circle text-decoration-none" style={{
-                    width: 36, height: 36,
-                    background: 'var(--bg-tertiary)',
-                    color: 'var(--text-tertiary)',
-                    fontSize: 'var(--text-sm)',
-                    fontWeight: 600
-                  }} aria-label={social.name}>
-                    <social.icon size={18} />
-                  </a>
-                ))}
               </div>
             </div>
             <div className="col-6 col-lg-2 offset-lg-1">
